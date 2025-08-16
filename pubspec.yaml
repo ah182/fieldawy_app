@@ -1,0 +1,76 @@
+name: fieldawy_store
+description: "A new Flutter project."
+publish_to: 'none'
+version: 1.0.0+1
+
+environment:
+  sdk: '>=3.2.6 <4.0.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+  meta: ^1.15.0
+  flutter_hooks: ^0.20.5
+  hooks_riverpod: ^2.5.1
+  cupertino_icons: ^1.0.8
+  firebase_core: ^4.0.0
+  flutter_riverpod: ^2.5.1
+  go_router: ^16.1.0
+  firebase_auth: ^6.0.0
+
+  cached_network_image: ^3.3.1
+  google_sign_in: ^6.2.1
+  image_picker: ^1.1.2
+  firebase_storage: ^13.0.0
+  permission_handler: ^12.0.1
+  url_launcher: ^6.3.0
+  flutter_localizations:
+    sdk: flutter
+  cloudinary_public: ^0.23.1
+  shared_preferences: ^2.5.3
+  easy_localization: ^3.0.8
+  package_info_plus: ^8.3.0
+  flutter_zoom_drawer: ^3.2.0
+  cloud_firestore: ^6.0.0
+  path: ^1.9.1
+  intl: ^0.20.2
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^6.0.0
+  # حزمة الشاشة الابتدائية توضع هنا
+ # pubspec.yaml
+  flutter_native_splash: ^2.4.0
+  
+
+flutter_native_splash:
+  # --- Light Mode Settings ---
+  color: "#f3f4f7"  # Your light mode background color
+  image: assets/logo_light.png # Logo for light mode
+
+  # --- Dark Mode Settings ---
+  color_dark: "#2E3A48" # Your dark mode background color
+  image_dark: assets/logo_dark.png # Logo for dark mode
+
+  # Settings for Android 12+
+  android_12:
+    color: "#f3f4f7"
+    image: assets/logo_light.png
+    color_dark: "#2E3A48"
+    image_dark: assets/logo_dark.png
+# --- قسم فلاتر الموحد والصحيح ---
+flutter:
+  uses-material-design: true
+  assets:
+    # هذا السطر كافٍ لتضمين كل ما في مجلد assets
+    - assets/
+    - assets/translations/ # <-- أضف هذا السطر
+    
+
+fonts:
+  - family: Cairo
+    fonts:
+      - asset: assets/fonts/Cairo-Regular.ttf
+      - asset: assets/fonts/Cairo-Bold.ttf
+        weight: 700    
