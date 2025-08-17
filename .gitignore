@@ -56,3 +56,4 @@ app.*.map.json
 *.dll
 *.cache
 *.log
+serviceAccountKey.json
