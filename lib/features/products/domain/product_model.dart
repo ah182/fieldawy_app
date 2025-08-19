@@ -60,7 +60,7 @@ class ProductModel {
   // دالة مساعدة لنسخ المنتج مع تعديل السعر (مهمة لشاشة أدويتي)
     ProductModel copyWith({
     double? price,
-    String? selectedPackage, // <-- تمت إضافته هنا
+    String? selectedPackage, required String distributorId, // <-- تمت إضافته هنا
   }) {
     return ProductModel(
       id: id,

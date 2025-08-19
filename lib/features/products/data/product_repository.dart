@@ -68,6 +68,75 @@ final productRepositoryProvider = Provider<ProductRepository>((ref) {
 final productsStreamProvider = StreamProvider<List<ProductModel>>((ref) {
   return ref.watch(productRepositoryProvider).getAllProductsStream();
 });
+// Provider لجلب منتجات جميع الموزعين مع الأسعار
+final allDistributorProductsProvider =
+    StreamProvider<List<ProductModel>>((ref) {
+  final firestore = FirebaseFirestore.instance;
+
+  return firestore
+      .collection('distributorProducts')
+      .snapshots()
+      .asyncMap((distributorSnapshot) async {
+    if (distributorSnapshot.docs.isEmpty) {
+      return [];
+    }
+
+    // استخراج البيانات من منتجات الموزعين
+    final productLinks = distributorSnapshot.docs
+        .map((doc) => doc.data())
+        .where((data) =>
+            data['productId'] != null &&
+            data['price'] != null &&
+            data['package'] != null &&
+            data['distributorName'] != null)
+        .toList();
+
+    if (productLinks.isEmpty) return [];
+
+    final productIds = productLinks
+        .map((link) => link['productId'] as String)
+        .toSet()
+        .toList();
+
+    // جلب تفاصيل المنتجات من المجموعة الرئيسية
+    final List<QueryDocumentSnapshot<Map<String, dynamic>>> allProductDocs = [];
+    for (var i = 0; i < productIds.length; i += 30) {
+      final sublist = productIds.sublist(
+          i, i + 30 > productIds.length ? productIds.length : i + 30);
+      if (sublist.isNotEmpty) {
+        final productDocsSnapshot = await firestore
+            .collection('products')
+            .where(FieldPath.documentId, whereIn: sublist)
+            .get();
+        allProductDocs.addAll(productDocsSnapshot.docs);
+      }
+    }
+
+    // تحويل تفاصيل المنتجات إلى خريطة
+    final productsMap = {
+      for (var doc in allProductDocs) doc.id: ProductModel.fromFirestore(doc)
+    };
+
+    // دمج البيانات النهائية
+    final allDistributorProducts = productLinks
+        .map((link) {
+          final productDetails = productsMap[link['productId']];
+
+          if (productDetails != null) {
+            return productDetails.copyWith(
+              price: (link['price'] as num).toDouble(),
+              selectedPackage: link['package'] as String,
+              distributorId: link['distributorName'] as String, // اسم الموزع
+            );
+          }
+          return null;
+        })
+        .whereType<ProductModel>()
+        .toList();
+
+    return allDistributorProducts;
+  });
+});
 
 // --- Provider "أدويتي" (النسخة النهائية والمصححة) ---
 final myProductsProvider = StreamProvider<List<ProductModel>>((ref) {
@@ -135,6 +204,7 @@ final myProductsProvider = StreamProvider<List<ProductModel>>((ref) {
             return productDetails.copyWith(
               price: (link['price'] as num).toDouble(),
               selectedPackage: link['package'] as String,
+              distributorId: link['distributorName'] as String,
             );
           }
           return null;

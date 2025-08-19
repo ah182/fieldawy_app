@@ -10,6 +10,7 @@ import 'dart:ui' as ui; // <= لتفادي أي تعارض مع TextDirection
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:fieldawy_store/features/products/domain/product_model.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
+import 'package:fieldawy_store/features/authentication/services/auth_service.dart';
 
 class MyProductsScreen extends HookConsumerWidget {
   // <= غيرنا لـ HookConsumerWidget
@@ -74,6 +75,81 @@ class MyProductsScreen extends HookConsumerWidget {
     );
   }
 
+  /// دالة تأكيد الحذف
+  static Future<bool?> _showDeleteConfirmationDialog(
+      BuildContext context, String productName) {
+    return showDialog<bool>(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: Text('تأكيد الحذف'),
+          content: Text('هل أنت متأكد من حذف المنتج "$productName"؟'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(false),
+              child: Text('إلغاء'),
+            ),
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(true),
+              style: TextButton.styleFrom(foregroundColor: Colors.red),
+              child: Text('حذف'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  /// دالة تعديل السعر
+  static Future<double?> _showEditPriceDialog(
+      BuildContext context, ProductModel product) {
+    final TextEditingController priceController = TextEditingController(
+      text: product.price?.toString() ?? '',
+    );
+
+    return showDialog<double>(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: Text('تعديل سعر ${product.name}'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(
+                controller: priceController,
+                keyboardType: TextInputType.numberWithOptions(decimal: true),
+                decoration: InputDecoration(
+                  labelText: 'السعر الجديد',
+                  suffixText: 'جنيه',
+                  border: OutlineInputBorder(),
+                ),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: Text('إلغاء'),
+            ),
+            TextButton(
+              onPressed: () {
+                final newPrice = double.tryParse(priceController.text);
+                if (newPrice != null && newPrice > 0) {
+                  Navigator.of(context).pop(newPrice);
+                } else {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text('الرجاء إدخال سعر صحيح')),
+                  );
+                }
+              },
+              child: Text('تحديث'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     // === استدعاء الـ Provider اللي بيجيب قائمة "أدويةي" ===
@@ -83,64 +159,147 @@ class MyProductsScreen extends HookConsumerWidget {
     final searchQuery = useState<String>(''); // <= متغير البحث
 
     return Scaffold(
-      // === تعديل AppBar علشان يحتوي على SearchBar ===
+      // === تعديل AppBar علشان يحتوي على SearchBar وعداد المنتجات ===
       appBar: AppBar(
         title: Text('myMedicines'.tr()),
         elevation: 2,
-        // إضافة SearchBar في الـ AppBar
+        // إضافة SearchBar وعداد المنتجات في الـ AppBar
         bottom: PreferredSize(
-          preferredSize: const Size.fromHeight(kToolbarHeight + 16.0),
-          child: Padding(
-            padding:
-                const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
-            child: TextField(
-              onChanged: (value) {
-                // تحديث نص البحث في الـ state
-                searchQuery.value = value;
-              },
-              decoration: InputDecoration(
-                hintText: 'ابحث عن منتج...', // <= نص تلميحي
-                prefixIcon: const Icon(Icons.search),
-                suffixIcon: searchQuery.value.isNotEmpty // <= زرار مسح لو في نص
-                    ? IconButton(
-                        icon: const Icon(Icons.clear),
-                        onPressed: () {
-                          // مسح النص وتحديث الـ state
-                          searchQuery.value = '';
-                        },
-                      )
-                    : null,
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(30.0),
-                  borderSide: BorderSide.none,
+          preferredSize: const Size.fromHeight(
+              kToolbarHeight + 50.0), // زيادة الارتفاع لاستيعاب العداد
+          child: Column(
+            children: [
+              // === شريط البحث ===
+              Padding(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+                child: TextField(
+                  onChanged: (value) {
+                    // تحديث نص البحث في الـ state
+                    searchQuery.value = value;
+                  },
+                  decoration: InputDecoration(
+                    hintText: 'ابحث عن منتج...', // <= نص تلميحي
+                    prefixIcon: const Icon(Icons.search),
+                    suffixIcon:
+                        searchQuery.value.isNotEmpty // <= زرار مسح لو في نص
+                            ? IconButton(
+                                icon: const Icon(Icons.clear),
+                                onPressed: () {
+                                  // مسح النص وتحديث الـ state
+                                  searchQuery.value = '';
+                                },
+                              )
+                            : null,
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(30.0),
+                      borderSide: BorderSide.none,
+                    ),
+                    filled: true,
+                    fillColor: Theme.of(context)
+                        .colorScheme
+                        .surfaceVariant, // <= لون خلفية الحقل
+                  ),
                 ),
-                filled: true,
-                fillColor: Theme.of(context)
-                    .colorScheme
-                    .surfaceVariant, // <= لون خلفية الحقل
               ),
-            ),
+              // === عداد المنتجات الأنيق ===
+              Container(
+                margin: const EdgeInsets.symmetric(horizontal: 16.0),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 12.0, vertical: 6.0),
+                decoration: BoxDecoration(
+                  color: Theme.of(context)
+                      .colorScheme
+                      .primaryContainer
+                      .withOpacity(0.2),
+                  borderRadius: BorderRadius.circular(20),
+                  border: Border.all(
+                    color:
+                        Theme.of(context).colorScheme.primary.withOpacity(0.2),
+                    width: 1,
+                  ),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(
+                      Icons.inventory_2_outlined,
+                      size: 16,
+                      color: Theme.of(context).colorScheme.primary,
+                    ),
+                    const SizedBox(width: 6),
+                    myProductsAsync.when(
+                      data: (products) {
+                        final totalCount = products.length;
+                        final filteredCount = searchQuery.value.isEmpty
+                            ? totalCount
+                            : products.where((product) {
+                                final query = searchQuery.value.toLowerCase();
+                                final productName = product.name.toLowerCase();
+                                final productCompany =
+                                    product.company?.toLowerCase() ?? '';
+                                final productActivePrinciple =
+                                    product.activePrinciple?.toLowerCase() ??
+                                        '';
+                                return productName.contains(query) ||
+                                    productCompany.contains(query) ||
+                                    productActivePrinciple.contains(query);
+                              }).length;
+
+                        return Text(
+                          searchQuery.value.isEmpty
+                              ? 'إجمالي المنتجات: $totalCount'
+                              : 'عرض $filteredCount من $totalCount منتج',
+                          style: Theme.of(context)
+                              .textTheme
+                              .bodySmall
+                              ?.copyWith(
+                                color: Theme.of(context).colorScheme.secondary,
+                                fontWeight: FontWeight.w700,
+                              ),
+                        );
+                      },
+                      loading: () => Text(
+                        'جارٍ العد...',
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                              color: Theme.of(context).colorScheme.primary,
+                              fontWeight: FontWeight.w500,
+                            ),
+                      ),
+                      error: (_, __) => Text(
+                        'خطأ في العد',
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                              color: Theme.of(context).colorScheme.error,
+                              fontWeight: FontWeight.w500,
+                            ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 8),
+            ],
           ),
         ),
       ),
       floatingActionButton: FloatingActionButton.extended(
-          onPressed: () {
-            Navigator.of(context).push(
-              MaterialPageRoute(
-                  builder: (context) => const AddFromCatalogScreen()),
-            );
-          },
-          label: Text('addProduct'.tr()),
-          icon: const Icon(Icons.add),
-          elevation: 4,
-          backgroundColor: Theme.of(context).brightness == Brightness.light
-              ? const Color.fromARGB(255, 44, 214,
-                  223) // لون أزرق أكتر صفاءً للوضع النهاري (kBlue)
-              : Theme.of(context).brightness == Brightness.dark
-                  ? const Color.fromARGB(255, 31, 115, 151)
-                  : Theme.of(context).colorScheme.primary,
-          foregroundColor: Colors.white,
-        ),
+        onPressed: () {
+          Navigator.of(context).push(
+            MaterialPageRoute(
+                builder: (context) => const AddFromCatalogScreen()),
+          );
+        },
+        label: Text('addProduct'.tr()),
+        icon: const Icon(Icons.add),
+        elevation: 4,
+        backgroundColor: Theme.of(context).brightness == Brightness.light
+            ? const Color.fromARGB(
+                255, 44, 214, 223) // لون أزرق أكتر صفاءً للوضع النهاري (kBlue)
+            : Theme.of(context).brightness == Brightness.dark
+                ? const Color.fromARGB(255, 31, 115, 151)
+                : Theme.of(context).colorScheme.primary,
+        foregroundColor: Colors.white,
+      ),
       body: myProductsAsync.when(
         data: (products) {
           // === فلترة المنتجات حسب نص البحث (في الاسم، الشركة، والمادة الفعالة) ===
@@ -340,8 +499,49 @@ class MyProductsScreen extends HookConsumerWidget {
                         IconButton(
                           icon: const Icon(Icons.edit_outlined,
                               color: Colors.blue),
-                          onPressed: () {
-                            // Edit logic will go here
+                          onPressed: () async {
+                            final newPrice =
+                                await _showEditPriceDialog(context, product);
+                            if (newPrice != null) {
+                              try {
+                                final userId = ref
+                                    .read(authServiceProvider)
+                                    .currentUser
+                                    ?.uid;
+                                if (userId != null) {
+                                  // حذف المنتج القديم
+                                  await ref
+                                      .read(productRepositoryProvider)
+                                      .removeProductFromDistributorCatalog(
+                                        distributorId: userId,
+                                        productId: product.id,
+                                        package: product.selectedPackage ?? '',
+                                      );
+
+                                  // إضافة المنتج بالسعر الجديد
+                                  final uniqueKey =
+                                      '${product.id}_${product.selectedPackage ?? ''}';
+                                  await ref
+                                      .read(productRepositoryProvider)
+                                      .addMultipleProductsToDistributorCatalog(
+                                    distributorId: userId,
+                                    distributorName: '',
+                                    productsToAdd: {uniqueKey: newPrice},
+                                  );
+
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(
+                                        content: Text('تم تحديث السعر بنجاح')),
+                                  );
+                                }
+                              } catch (e) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                      content: Text(
+                                          'فشل تحديث السعر. حاول مرة أخرى.')),
+                                );
+                              }
+                            }
                           },
                           tooltip: 'edit'.tr(),
                           splashRadius: 20,
@@ -349,8 +549,38 @@ class MyProductsScreen extends HookConsumerWidget {
                         IconButton(
                           icon: const Icon(Icons.delete_outline,
                               color: Colors.red),
-                          onPressed: () {
-                            // Delete logic will go here
+                          onPressed: () async {
+                            final confirmDelete =
+                                await _showDeleteConfirmationDialog(
+                                    context, product.name);
+                            if (confirmDelete == true) {
+                              try {
+                                final userId = ref
+                                    .read(authServiceProvider)
+                                    .currentUser
+                                    ?.uid;
+                                if (userId != null) {
+                                  await ref
+                                      .read(productRepositoryProvider)
+                                      .removeProductFromDistributorCatalog(
+                                        distributorId: userId,
+                                        productId: product.id,
+                                        package: product.selectedPackage ?? '',
+                                      );
+
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(
+                                        content: Text('تم حذف المنتج بنجاح')),
+                                  );
+                                }
+                              } catch (e) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                      content: Text(
+                                          'فشل حذف المنتج. حاول مرة أخرى.')),
+                                );
+                              }
+                            }
                           },
                           tooltip: 'delete'.tr(),
                           splashRadius: 20,
