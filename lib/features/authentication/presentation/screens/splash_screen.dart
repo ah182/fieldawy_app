@@ -13,7 +13,7 @@ class SplashScreen extends StatelessWidget {
     final logoPath =
         isDarkMode ? 'assets/logo_dark.png' : 'assets/logo_light.png';
     final backgroundColor =
-        isDarkMode ? const Color(0xFF1f1d1d) : const Color(0xFFf3f4f7);
+        isDarkMode ? const Color(0xFF0F1220) : const Color(0xFFf3f4f7);
 
     return Scaffold(
       backgroundColor: backgroundColor,

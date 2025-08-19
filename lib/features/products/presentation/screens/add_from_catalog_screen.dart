@@ -128,6 +128,7 @@ class _AddFromCatalogScreenState extends ConsumerState<AddFromCatalogScreen> {
     // === تحديد الألوان المطلوبة للعناصر المخصصة ===
     final Color customElementColor = const Color.fromARGB(255, 119, 186, 225);
     final Color customSearchColor = const Color.fromARGB(255, 61, 73, 92);
+
     return Theme(
       // نعمل نسخة من الثيم الأساسي ونعدل عليه بس لو الوضع داكن
       data: Theme.of(context).brightness == Brightness.dark
@@ -158,49 +159,151 @@ class _AddFromCatalogScreenState extends ConsumerState<AddFromCatalogScreen> {
             )
           : Theme.of(context), // لو مش داكن، نسيب الثيم زي ما هو
       child: Scaffold(
-        // === تعديل AppBar علشان يحتوي على SearchBar ===
+        // === تعديل AppBar علشان يحتوي على SearchBar وعداد المنتجات ===
         appBar: AppBar(
           title: const Text('إضافة من الكتالوج'),
-          // إضافة SearchBar في الـ AppBar
+          // إضافة SearchBar وعداد المنتجات في الـ AppBar
           bottom: PreferredSize(
-            preferredSize: const Size.fromHeight(kToolbarHeight + 16.0),
-            child: Padding(
-              padding:
-                  const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
-              child: TextField(
-                controller: _searchController,
-                onChanged: (value) {
-                  // تحديث نص البحث في الـ state
-                  setState(() {
-                    _searchQuery = value;
-                  });
-                  // مش محتاجين نعمل حاجة تانية هنا، الـ build هتشتغل تاني وتشوف التغيير
-                },
-                decoration: InputDecoration(
-                  hintText: 'ابحث عن منتج...',
-                  prefixIcon: const Icon(Icons.search),
-                  suffixIcon: _searchQuery.isNotEmpty
-                      ? IconButton(
-                          icon: const Icon(Icons.clear),
-                          onPressed: () {
-                            // مسح النص وتحديث الـ state
-                            _searchController.clear();
-                            setState(() {
-                              _searchQuery = '';
-                            });
-                          },
-                        )
-                      : null,
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(30.0),
-                    borderSide: BorderSide.none,
+            preferredSize: const Size.fromHeight(
+                kToolbarHeight + 50.0), // زيادة الارتفاع لاستيعاب العداد
+            child: Column(
+              children: [
+                // === شريط البحث ===
+                Padding(
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: 16.0, vertical: 8.0),
+                  child: TextField(
+                    controller: _searchController,
+                    onChanged: (value) {
+                      // تحديث نص البحث في الـ state
+                      setState(() {
+                        _searchQuery = value;
+                      });
+                      // مش محتاجين نعمل حاجة تانية هنا، الـ build هتشتغل تاني وتشوف التغيير
+                    },
+                    decoration: InputDecoration(
+                      hintText: 'ابحث عن منتج...',
+                      prefixIcon: const Icon(Icons.search),
+                      suffixIcon: _searchQuery.isNotEmpty
+                          ? IconButton(
+                              icon: const Icon(Icons.clear),
+                              onPressed: () {
+                                // مسح النص وتحديث الـ state
+                                _searchController.clear();
+                                setState(() {
+                                  _searchQuery = '';
+                                });
+                              },
+                            )
+                          : null,
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(30.0),
+                        borderSide: BorderSide.none,
+                      ),
+                      filled: true,
+                      fillColor: Theme.of(context).brightness == Brightness.dark
+                          ? customSearchColor // اللون المخصص في الوضع الداكن
+                          : null, // <= تحديد اللون هنا كمان علشان يشتغل حتى لو الـ ThemeData مفيهوش
+                    ),
                   ),
-                  filled: true,
-                  fillColor: Theme.of(context).brightness == Brightness.dark
-                      ? customSearchColor // اللون المخصص في الوضع الداكن
-                      : null, // <= تحديد اللون هنا كمان علشان يشتغل حتى لو الـ ThemeData مفيهوش
                 ),
-              ),
+                // === عداد المنتجات الأنيق ===
+                Container(
+                  margin: const EdgeInsets.symmetric(horizontal: 16.0),
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: 12.0, vertical: 6.0),
+                  decoration: BoxDecoration(
+                    color: Theme.of(context)
+                        .colorScheme
+                        .primaryContainer
+                        .withOpacity(0.3),
+                    borderRadius: BorderRadius.circular(20),
+                    border: Border.all(
+                      color: Theme.of(context).colorScheme.primary
+                          .withOpacity(0.3),
+                      width: 1,
+                    ),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        Icons.storefront_outlined,
+                        size: 16,
+                        color: Theme.of(context).colorScheme.primary,
+                      ),
+                      const SizedBox(width: 6),
+                      allProductsAsync.when(
+                        data: (products) {
+                          // فلترة المنتجات حسب نص البحث
+                          List<ProductModel> filteredProducts;
+                          if (_searchQuery.isEmpty) {
+                            filteredProducts = products;
+                          } else {
+                            filteredProducts = products.where((product) {
+                              final query = _searchQuery.toLowerCase();
+                              final productName = product.name.toLowerCase();
+                              final productCompany =
+                                  product.company?.toLowerCase() ?? '';
+                              final productActivePrinciple =
+                                  product.activePrinciple?.toLowerCase() ?? '';
+
+                              return productName.contains(query) ||
+                                  productCompany.contains(query) ||
+                                  productActivePrinciple.contains(query);
+                            }).toList();
+                          }
+
+                          // حساب إجمالي العناصر (المنتجات × العبوات)
+                          int totalItems = 0;
+                          int filteredItems = 0;
+
+                          for (var product in products) {
+                            totalItems += product.availablePackages.length;
+                          }
+
+                          for (var product in filteredProducts) {
+                            filteredItems += product.availablePackages.length;
+                          }
+
+                          return Text(
+                            _searchQuery.isEmpty
+                                ? 'إجمالي العناصر: $totalItems'
+                                : 'عرض $filteredItems من $totalItems عنصر',
+                            style: Theme.of(context)
+                                .textTheme
+                                .bodySmall
+                                ?.copyWith(
+                                  color:
+                                      Theme.of(context).colorScheme.secondary,
+                                  fontWeight: FontWeight.w700,
+                                ),
+                          );
+                        },
+                        loading: () => Text(
+                          'جارٍ العد...',
+                          style: Theme.of(context)
+                              .textTheme
+                              .bodySmall
+                              ?.copyWith(
+                                color: Theme.of(context).colorScheme.secondary,
+                                fontWeight: FontWeight.w700,
+                              ),
+                        ),
+                        error: (_, __) => Text(
+                          'خطأ في العد',
+                          style:
+                              Theme.of(context).textTheme.bodySmall?.copyWith(
+                                    color: Theme.of(context).colorScheme.error,
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 8),
+              ],
             ),
           ),
         ),
@@ -227,8 +330,8 @@ class _AddFromCatalogScreenState extends ConsumerState<AddFromCatalogScreen> {
                       currentlySelectedKeys.add(key);
                     }
                   }
-            
-                   {
+
+                  {
                     // === لو كل الأسعار صحيحة، نبدأ عملية الحفظ ===
                     final success = await ref
                         .read(catalogSelectionControllerProvider.notifier)
@@ -503,7 +606,7 @@ class _ProductCatalogItem extends HookConsumerWidget {
                       ),
                     ),
                   const SizedBox(height: 8),
-   SizedBox(
+                  SizedBox(
                     height: 40,
                     child: TextField(
                       controller: priceController,
@@ -566,7 +669,6 @@ class _ProductCatalogItem extends HookConsumerWidget {
                       ),
                     ),
                   ),
-
                 ],
               ),
             ),
