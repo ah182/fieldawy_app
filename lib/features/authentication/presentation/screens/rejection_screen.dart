@@ -31,8 +31,8 @@ class RejectionScreen extends ConsumerWidget {
       } else {
         if (context.mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-                content: Text('لا يمكن فتح واتساب. الرجاء التأكد من تثبيته.')),
+             SnackBar(
+                                content: Text('cannotOpenWhatsApp'.tr())),
           );
         }
       }

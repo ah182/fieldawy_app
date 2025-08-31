@@ -288,8 +288,8 @@ class HomeScreen extends HookConsumerWidget {
                           onPressed: () {
                             ScaffoldMessenger.of(context).showSnackBar(
                               SnackBar(
-                                content:
-                                    Text('تمت إضافة ${product.name} للمفضلة'),
+                                                                content:
+                                    Text('addedToFavorites'.tr(args: [product.name])),
                                 duration: const Duration(seconds: 1),
                               ),
                             );
@@ -422,12 +422,7 @@ class HomeScreen extends HookConsumerWidget {
                           Row(
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
-                              Icon(
-                                Icons.info_outline,
-                                color: theme.colorScheme.primary,
-                                size: 20,
-                              ),
-                              const SizedBox(width: 8),
+                              
                               Expanded(
                                 child: Text(
                                   'لمزيد من المعلومات يرجى تنزيل تطبيق',
