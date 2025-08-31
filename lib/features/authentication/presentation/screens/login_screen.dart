@@ -253,7 +253,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
           ),
           const SizedBox(height: 12),
           Text(
-            'جارٍ تسجيل الدخول...',
+            'loggingIn'.tr(),
             style: TextStyle(
               fontSize: 16,
               fontWeight: FontWeight.w500,

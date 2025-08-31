@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-
+import 'package:easy_localization/easy_localization.dart';
 class CategoryScreen extends StatelessWidget {
   const CategoryScreen({super.key});
 
@@ -7,7 +7,7 @@ class CategoryScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: const Text('Category')),
-      body: const Center(child: Text('Category Screen')),
+      body: Center(child: Text('categoryScreen'.tr())),
     );
   }
 }

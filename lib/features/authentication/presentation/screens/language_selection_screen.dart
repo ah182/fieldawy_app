@@ -55,7 +55,7 @@ class LanguageSelectionScreen extends ConsumerWidget {
                 const SizedBox(height: 24),
                 _buildLanguageCard(
                   context: context,
-                  language: 'العربية',
+                  language: 'arabic'.tr(),
                   onTap: () => selectLanguage(const Locale('ar')),
                 ),
               ],
