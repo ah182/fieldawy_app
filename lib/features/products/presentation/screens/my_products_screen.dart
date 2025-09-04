@@ -1,6 +1,7 @@
-// lib/features/products/presentation/screens/my_products_screen.dart
+import 'package:fieldawy_store/features/home/application/user_data_provider.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:fieldawy_store/features/products/presentation/screens/add_from_catalog_screen.dart';
+import 'package:fieldawy_store/features/products/presentation/screens/add_product_ocr_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:fieldawy_store/features/products/data/product_repository.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
@@ -150,6 +151,42 @@ class MyProductsScreen extends HookConsumerWidget {
     );
   }
 
+  void _showAddProductOptions(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      builder: (BuildContext bc) {
+        return SafeArea(
+          child: Wrap(
+            children: <Widget>[
+              ListTile(
+                leading: const Icon(Icons.collections_bookmark),
+                title: const Text('Add from Catalog'),
+                onTap: () {
+                  Navigator.of(context).pop();
+                  Navigator.of(context).push(
+                    MaterialPageRoute(
+                        builder: (context) => const AddFromCatalogScreen()),
+                  );
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.camera_alt),
+                title: const Text('Scan with Camera'),
+                onTap: () {
+                  Navigator.of(context).pop();
+                  Navigator.of(context).push(
+                    MaterialPageRoute(
+                        builder: (context) => const AddProductOcrScreen()),
+                  );
+                },
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     // === استدعاء الـ Provider اللي بيجيب قائمة "أدويةي" ===
@@ -284,10 +321,7 @@ class MyProductsScreen extends HookConsumerWidget {
       ),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () {
-          Navigator.of(context).push(
-            MaterialPageRoute(
-                builder: (context) => const AddFromCatalogScreen()),
-          );
+          _showAddProductOptions(context);
         },
         label: Text('addProduct'.tr()),
         icon: const Icon(Icons.add),
@@ -518,6 +552,11 @@ class MyProductsScreen extends HookConsumerWidget {
                                         package: product.selectedPackage ?? '',
                                       );
 
+                                  final userData =
+                                      await ref.read(userDataProvider.future);
+                                  final distributorName =
+                                      userData?.displayName ?? '';
+
                                   // إضافة المنتج بالسعر الجديد
                                   final uniqueKey =
                                       '${product.id}_${product.selectedPackage ?? ''}';
@@ -525,7 +564,7 @@ class MyProductsScreen extends HookConsumerWidget {
                                       .read(productRepositoryProvider)
                                       .addMultipleProductsToDistributorCatalog(
                                     distributorId: userId,
-                                    distributorName: '',
+                                    distributorName: distributorName,
                                     productsToAdd: {uniqueKey: newPrice},
                                   );
 

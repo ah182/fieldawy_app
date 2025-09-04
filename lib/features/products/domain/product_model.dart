@@ -12,7 +12,7 @@ class ProductModel {
   final String imageUrl;
   final double? price;
   final String? distributorId;
-  final Timestamp createdAt;
+  final Timestamp? createdAt;
   final String? selectedPackage;
 
   ProductModel({
@@ -27,7 +27,7 @@ class ProductModel {
     required this.imageUrl,
     this.price,
     this.distributorId,
-    required this.createdAt,
+    this.createdAt,
     this.selectedPackage,
   });
 
@@ -53,29 +53,53 @@ class ProductModel {
       imageUrl: data['imageUrl'] ?? '', // Handle empty URL
       price: (data['price'] as num?)?.toDouble(),
       distributorId: data['distributorId'] as String?,
-      createdAt: data['createdAt'] ?? Timestamp.now(),
+      createdAt: data['createdAt'] as Timestamp?,
     );
   }
 
-  // دالة مساعدة لنسخ المنتج مع تعديل السعر (مهمة لشاشة أدويتي)
-    ProductModel copyWith({
+  ProductModel copyWith({
+    String? id,
+    String? name,
+    String? description,
+    String? activePrinciple,
+    String? company,
+    String? action,
+    String? package,
+    List<String>? availablePackages,
+    String? imageUrl,
     double? price,
-    String? selectedPackage, required String distributorId, // <-- تمت إضافته هنا
+    String? distributorId,
+    Timestamp? createdAt,
+    String? selectedPackage,
   }) {
     return ProductModel(
-      id: id,
-      name: name,
-      description: description,
-      activePrinciple: activePrinciple,
-      company: company,
-      action: action,
-      package: package,
-      availablePackages: availablePackages,
-      imageUrl: imageUrl,
+      id: id ?? this.id,
+      name: name ?? this.name,
+      description: description ?? this.description,
+      activePrinciple: activePrinciple ?? this.activePrinciple,
+      company: company ?? this.company,
+      action: action ?? this.action,
+      package: package ?? this.package,
+      availablePackages: availablePackages ?? this.availablePackages,
+      imageUrl: imageUrl ?? this.imageUrl,
       price: price ?? this.price,
-      distributorId: distributorId,
-      createdAt: createdAt,
-      selectedPackage: selectedPackage ?? this.selectedPackage, // <-- تمت إضافته هنا
+      distributorId: distributorId ?? this.distributorId,
+      createdAt: createdAt ?? this.createdAt,
+      selectedPackage: selectedPackage ?? this.selectedPackage,
     );
+  }
+
+  Map<String, dynamic> toFirestore() {
+    return {
+      'name': name,
+      'description': description,
+      'active_principle': activePrinciple,
+      'company': company,
+      'action': action,
+      'package': package,
+      'availablePackages': availablePackages,
+      'imageUrl': imageUrl,
+      'createdAt': createdAt ?? FieldValue.serverTimestamp(),
+    };
   }
 }

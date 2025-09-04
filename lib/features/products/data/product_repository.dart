@@ -57,6 +57,31 @@ class ProductRepository {
     final docId = '${distributorId}_$uniqueKey';
     await _firestore.collection('distributorProducts').doc(docId).delete();
   }
+
+  Future<String> addProductToCatalog(ProductModel product) async {
+    final docRef = await _firestore.collection('products').add(product.toFirestore());
+    return docRef.id;
+  }
+
+  Future<void> addProductToDistributorCatalog({
+    required String distributorId,
+    required String distributorName,
+    required String productId,
+    required String package,
+    required double price,
+  }) async {
+    final uniqueKey = '${productId}_$package';
+    final docId = '${distributorId}_$uniqueKey';
+    final docRef = _firestore.collection('distributorProducts').doc(docId);
+    await docRef.set({
+      'distributorId': distributorId,
+      'distributorName': distributorName,
+      'productId': productId,
+      'package': package,
+      'price': price,
+      'addedAt': FieldValue.serverTimestamp(),
+    });
+  }
 }
 
 // --- Providers ---
