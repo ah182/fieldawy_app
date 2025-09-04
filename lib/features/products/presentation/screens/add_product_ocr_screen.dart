@@ -23,12 +23,15 @@ class AddProductOcrScreen extends ConsumerStatefulWidget {
 }
 
 class _AddProductOcrScreenState extends ConsumerState<AddProductOcrScreen> {
-  // State variables for the new workflow
   File? _selectedImage;
-  String? _previewUrl; // Holds the URL for the background-removed preview
+  String? _previewUrl;
+  String? _finalImageUrl;
+  String? _tempPublicId; // ← لتخزين publicId للصورة المؤقتة
 
-  bool _isProcessing = false;
+  bool _isOCRProcessing = false;
+  bool _isUploadProcessing = false;
   bool _isFormValid = false;
+
   final _picker = ImagePicker();
   final _textRecognizer = TextRecognizer(script: TextRecognitionScript.latin);
 
@@ -106,134 +109,185 @@ class _AddProductOcrScreenState extends ConsumerState<AddProductOcrScreen> {
     final tempDir = await getTemporaryDirectory();
     final tempJpegPath = p.join(
         tempDir.path, '${DateTime.now().millisecondsSinceEpoch}_temp.jpg');
-    final XFile? compressedJpegXFile =
-        await FlutterImageCompress.compressAndGetFile(
-      file.absolute.path,
+    final compressedFile = await FlutterImageCompress.compressAndGetFile(
+      file.path,
       tempJpegPath,
       quality: 80,
       minWidth: 800,
       minHeight: 800,
       format: CompressFormat.jpeg,
     );
-
-    if (compressedJpegXFile == null) {
-      return file; // Return original if compression fails
-    }
-    return File(compressedJpegXFile.path);
+    return compressedFile != null ? File(compressedFile.path) : file;
   }
 
   Future<void> _pickImage(ImageSource source) async {
     final pickedFile = await _picker.pickImage(source: source);
     if (pickedFile == null) return;
 
-    // Set the master processing state to true
     setState(() {
-      _isProcessing = true;
+      _isOCRProcessing = true;
+      _isUploadProcessing = false;
       _previewUrl = null;
+      _selectedImage = null;
+      _finalImageUrl = null;
+      _tempPublicId = null;
     });
 
     try {
-      final compressedImage = await _compressImage(File(pickedFile.path));
-      
-      // Save the selected image
-      setState(() {
-        _selectedImage = compressedImage;
-      });
+      final compressed = await _compressImage(File(pickedFile.path));
+      setState(() => _selectedImage = compressed);
 
-      // Perform OCR on the local file before uploading
-      await _processImage(compressedImage);
+      await _processOCR(compressed);
 
-      // Upload the temp image to get the secureUrl and publicId
+      // Upload temp image
       final storageService = ref.read(storageServiceProvider);
-      final tempResult = await storageService.uploadTempImage(compressedImage);
-      
-      if (tempResult == null) {
-        throw Exception("Failed to upload temporary image.");
+      final tempResult = await storageService.uploadTempImage(compressed);
+      if (tempResult != null) {
+        setState(() {
+          _previewUrl = storageService.buildPreviewUrl(tempResult.secureUrl);
+          _tempPublicId = tempResult.publicId; // ← حفظ publicId
+        });
       }
-
-      // Update state with the new IDs and preview URL.
-      setState(() {
-        _previewUrl = storageService.buildPreviewUrl(tempResult.secureUrl);
-      });
-      
-      _validateForm();
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Failed to process image: $e')),
       );
     } finally {
       setState(() {
-        _isProcessing = false;
+        _isOCRProcessing = false;
+        _validateForm();
       });
     }
   }
 
-  Future<void> _processImage(File image) async {
+  Future<void> _processOCR(File image) async {
     final inputImage = InputImage.fromFilePath(image.path);
     final recognizedText = await _textRecognizer.processImage(inputImage);
     _parseRecognizedText(recognizedText);
   }
 
   void _parseRecognizedText(RecognizedText recognizedText) {
-    _nameController.clear();
-    _companyController.clear();
-    _activePrincipleController.clear();
-    _packageController.clear();
-
-    final lines = recognizedText.blocks.expand((block) => block.lines).toList();
+    final lines = recognizedText.blocks.expand((b) => b.lines).toList();
     if (lines.isEmpty) return;
 
     _nameController.text = lines.first.text;
-    if (lines.length > 1) {
-      _companyController.text = lines.last.text;
+    _companyController.text = lines.length > 1 ? lines.last.text : '';
+    _activePrincipleController.text = '';
+
+    String package = '';
+    String? price;
+    final lowerLines = lines.map((l) => l.text.toLowerCase());
+    for (var line in lowerLines) {
+      if (line.contains('ml') || line.contains('sachet')) package = line;
+      final match = RegExp(r'\b\d+(?:\.\d{1,2})?\b').firstMatch(line);
+      if (match != null) price = match.group(0);
     }
 
-    String tempPackage = '';
-    for (final line in lines) {
-      final text = line.text.toLowerCase();
-      if (text.contains('ml') || text.contains('sachet')) {
-        tempPackage += ' ' + line.text;
+    _packageController.text = package;
+    if (price != null) _priceController.text = price;
+  }
+
+  Future<void> _saveProduct() async {
+    if (!_isFormValid || _selectedImage == null) return;
+
+    setState(() => _isUploadProcessing = true);
+
+    try {
+      final storageService = ref.read(storageServiceProvider);
+      final finalUrl = await storageService.uploadFinalImage(_selectedImage!);
+      if (finalUrl == null) throw Exception('Failed to make image permanent');
+
+      setState(() => _finalImageUrl = finalUrl);
+
+      // ← حذف الصورة المؤقتة بعد رفع الصورة النهائية
+      if (_tempPublicId != null) {
+        await storageService.deleteTempImage(_tempPublicId!);
       }
-    }
-    _packageController.text = tempPackage.trim();
 
-    if (_nameController.text == _companyController.text && lines.length > 1) {
-      _nameController.text = lines[0].text;
-    }
+      final name = _nameController.text;
+      final company = _companyController.text;
+      final activePrinciple = _activePrincipleController.text;
+      String package = _packageController.text;
+      final price = double.tryParse(_priceController.text);
+      if (price == null) throw Exception('Invalid price format');
 
-    _packageController.text = _packageController.text.trim();
+      if (_selectedPackageType != null &&
+          !package
+              .toLowerCase()
+              .contains(_selectedPackageType!.toLowerCase())) {
+        package = '${package.trim()} $_selectedPackageType'.trim();
+      }
+
+      final newProduct = ProductModel(
+        id: '',
+        name: name,
+        company: company,
+        activePrinciple: activePrinciple,
+        imageUrl: finalUrl,
+        package: package,
+        availablePackages: [package],
+      );
+
+      final productRepo = ref.read(productRepositoryProvider);
+      final newProductId = await productRepo.addProductToCatalog(newProduct);
+
+      final userId = ref.read(authServiceProvider).currentUser?.uid;
+      final userData = await ref.read(userDataProvider.future);
+      final distributorName = userData?.displayName ?? 'Unknown Distributor';
+
+      if (userId != null) {
+        await productRepo.addProductToDistributorCatalog(
+          distributorId: userId,
+          distributorName: distributorName,
+          productId: newProductId,
+          package: package,
+          price: price,
+        );
+      }
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: const Text('Product added successfully!'),
+          behavior: SnackBarBehavior.floating,
+          backgroundColor: Colors.green.shade600,
+        ),
+      );
+      Navigator.of(context).pop();
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Failed to save product: $e'),
+          behavior: SnackBarBehavior.floating,
+          backgroundColor: Theme.of(context).colorScheme.error,
+        ),
+      );
+    } finally {
+      setState(() => _isUploadProcessing = false);
+    }
   }
 
   @override
   void dispose() {
-    // In the new approach, temporary images are automatically deleted by Cloudinary
-    // We don't need to manually delete them unless there was an error
-
     _textRecognizer.close();
-    _nameController.removeListener(_validateForm);
     _nameController.dispose();
-    _companyController.removeListener(_validateForm);
     _companyController.dispose();
-    _activePrincipleController.removeListener(_validateForm);
     _activePrincipleController.dispose();
-    _priceController.removeListener(_validateForm);
-    _priceController.dispose();
-    _packageController.removeListener(_validateForm);
     _packageController.dispose();
+    _priceController.dispose();
     super.dispose();
   }
 
+  // ---------------- UI ----------------
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
 
-    final containerBgColor = isDark
-        ? Colors.grey.shade800.withOpacity(0.5)
-        : Colors.white.withOpacity(0.9);
     final cardElevation = isDark ? 2.0 : 4.0;
-    final inputBgColor = isDark ? const Color(0xFF2A2A3A) : const Color(0xFFF8FDFF);
-    final inputBorderColor = isDark ? Colors.grey.shade700 : const Color(0xFFE0E6F0);
+    final inputBgColor =
+        isDark ? const Color(0xFF2A2A3A) : const Color(0xFFF8FDFF);
+    final inputBorderColor =
+        isDark ? Colors.grey.shade700 : const Color(0xFFE0E6F0);
     final accentColor = theme.colorScheme.primary;
     final priceColor =
         isDark ? Colors.lightGreenAccent.shade200 : Colors.green.shade700;
@@ -242,92 +296,8 @@ class _AddProductOcrScreenState extends ConsumerState<AddProductOcrScreen> {
       width: double.infinity,
       padding: const EdgeInsets.only(top: 24.0),
       child: ElevatedButton(
-        onPressed: (_isFormValid && !_isProcessing)
-            ? () async {
-                setState(() {
-                  _isProcessing = true;
-                });
-
-                try {
-                  if (_selectedImage == null) {
-                    throw Exception('Please select an image first.');
-                  }
-
-                  final storageService = ref.read(storageServiceProvider);
-                  final finalUrl =
-                      await storageService.uploadFinalImage(_selectedImage!);
-
-                  if (finalUrl == null) {
-                    throw Exception('Failed to make image permanent.');
-                  }
-
-                  final name = _nameController.text;
-                  final company = _companyController.text;
-                  final activePrinciple = _activePrincipleController.text;
-                  String package = _packageController.text;
-                  final price = double.tryParse(_priceController.text);
-
-                  if (price == null) {
-                    throw Exception('Invalid price format.');
-                  }
-
-                  if (_selectedPackageType != null &&
-                      !package
-                          .toLowerCase()
-                          .contains(_selectedPackageType!.toLowerCase())) {
-                    package = '${package.trim()} $_selectedPackageType'.trim();
-                  }
-
-                  final newProduct = ProductModel(
-                    id: '',
-                    name: name,
-                    company: company,
-                    activePrinciple: activePrinciple,
-                    imageUrl: finalUrl,
-                    package: package,
-                    availablePackages: [package],
-                  );
-
-                  final productRepo = ref.read(productRepositoryProvider);
-                  final newProductId =
-                      await productRepo.addProductToCatalog(newProduct);
-
-                  final userId = ref.read(authServiceProvider).currentUser?.uid;
-                  final userData = await ref.read(userDataProvider.future);
-                  final distributorName =
-                      userData?.displayName ?? 'Unknown Distributor';
-
-                  if (userId != null) {
-                    await productRepo.addProductToDistributorCatalog(
-                      distributorId: userId,
-                      distributorName: distributorName,
-                      productId: newProductId,
-                      package: package,
-                      price: price,
-                    );
-                  }
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: const Text('Product added successfully!'),
-                      behavior: SnackBarBehavior.floating,
-                      backgroundColor: Colors.green.shade600,
-                    ),
-                  );
-                  Navigator.of(context).pop();
-                } catch (e) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text('Failed to save product: $e'),
-                      behavior: SnackBarBehavior.floating,
-                      backgroundColor: theme.colorScheme.error,
-                    ),
-                  );
-                } finally {
-                  setState(() {
-                    _isProcessing = false;
-                  });
-                }
-              }
+        onPressed: (_isFormValid && !_isOCRProcessing && !_isUploadProcessing)
+            ? _saveProduct
             : null,
         style: ElevatedButton.styleFrom(
           padding: const EdgeInsets.symmetric(vertical: 16),
@@ -335,30 +305,9 @@ class _AddProductOcrScreenState extends ConsumerState<AddProductOcrScreen> {
             borderRadius: BorderRadius.circular(16),
           ),
           minimumSize: const Size(double.infinity, 54),
-          elevation: _isFormValid && !_isProcessing ? 4 : 0,
-          shadowColor: theme.colorScheme.primary.withOpacity(0.5),
-        ).merge(
-          ButtonStyle(
-            backgroundColor: MaterialStateProperty.resolveWith<Color?>(
-              (Set<MaterialState> states) {
-                if (states.contains(MaterialState.disabled)) {
-                  return theme.colorScheme.onSurface.withOpacity(0.12);
-                }
-                return theme.colorScheme.primary;
-              },
-            ),
-            foregroundColor: MaterialStateProperty.resolveWith<Color?>(
-              (Set<MaterialState> states) {
-                if (states.contains(MaterialState.disabled)) {
-                  return theme.colorScheme.onSurface.withOpacity(0.38);
-                }
-                return Colors.white;
-              },
-            ),
-          ),
         ),
-        child: _isProcessing
-            ? const SizedBox(
+        child: (_isOCRProcessing || _isUploadProcessing)
+            ? SizedBox(
                 height: 24,
                 width: 24,
                 child: CircularProgressIndicator(
@@ -385,8 +334,8 @@ class _AddProductOcrScreenState extends ConsumerState<AddProductOcrScreen> {
             fontWeight: FontWeight.bold,
           ),
         ),
-        scrolledUnderElevation: 0,
         centerTitle: true,
+        scrolledUnderElevation: 0,
         shadowColor: Colors.transparent,
       ),
       body: SingleChildScrollView(
@@ -421,7 +370,9 @@ class _AddProductOcrScreenState extends ConsumerState<AddProductOcrScreen> {
                       child: Row(
                         children: [
                           Icon(
-                            _previewUrl != null ? Icons.image : Icons.photo_camera,
+                            _previewUrl != null
+                                ? Icons.image
+                                : Icons.photo_camera,
                             color: _previewUrl != null
                                 ? accentColor
                                 : theme.colorScheme.onSurface.withOpacity(0.6),
@@ -444,26 +395,41 @@ class _AddProductOcrScreenState extends ConsumerState<AddProductOcrScreen> {
                               overflow: TextOverflow.ellipsis,
                             ),
                           ),
+                          if (_isOCRProcessing)
+                            Padding(
+                              padding: const EdgeInsets.only(left: 8.0),
+                              child: SizedBox(
+                                height: 20,
+                                width: 20,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  color: accentColor,
+                                ),
+                              ),
+                            ),
+                          if (_isUploadProcessing)
+                            Padding(
+                              padding: const EdgeInsets.only(left: 8.0),
+                              child: SizedBox(
+                                height: 20,
+                                width: 20,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  color: Colors.orangeAccent,
+                                ),
+                              ),
+                            ),
                         ],
                       ),
                     ),
-                    if (_isProcessing)
-                      SizedBox(
-                        height: 250,
-                        child: Center(
-                          child: CircularProgressIndicator(
-                            color: theme.colorScheme.primary,
-                            strokeWidth: 4.0,
-                          ),
-                        ),
-                      )
-                      else if (_previewUrl != null)
+                    if (_previewUrl != null)
                       SizedBox(
                         height: 250,
                         child: CachedNetworkImage(
-                          imageUrl: _previewUrl!,
+                          imageUrl: _finalImageUrl ?? _previewUrl!,
                           fit: BoxFit.contain,
-                          progressIndicatorBuilder: (context, url, progress) => Center(
+                          progressIndicatorBuilder: (context, url, progress) =>
+                              Center(
                             child: CircularProgressIndicator(
                               value: progress.progress,
                               color: accentColor,
@@ -478,78 +444,44 @@ class _AddProductOcrScreenState extends ConsumerState<AddProductOcrScreen> {
                     else
                       Container(
                         height: 250,
-                        decoration: BoxDecoration(
-                          color: inputBgColor,
-                          borderRadius: BorderRadius.circular(5),
-                        ),
+                        color: inputBgColor,
                         child: Center(
-                          child: Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Icon(
-                                Icons.camera_alt,
-                                size: 44,
-                                color: theme.colorScheme.onSurface
-                                    .withOpacity(0.4),
-                              ),
-                              const SizedBox(height: 16),
-                              Text(
-                                'No image selected',
-                                style: theme.textTheme.titleMedium?.copyWith(
-                                  color: theme.colorScheme.onSurface
-                                      .withOpacity(0.6),
-                                ),
-                              ),
-                              const SizedBox(height: 8),
-                              Text(
-                                'Select an image to begin extraction',
-                                textAlign: TextAlign.center,
-                                style: theme.textTheme.bodyMedium?.copyWith(
-                                  color: theme.colorScheme.onSurface
-                                      .withOpacity(0.5),
-                                ),
-                              ),
-                            ],
+                          child: Text(
+                            'No image selected',
+                            style: theme.textTheme.titleMedium?.copyWith(
+                              color:
+                                  theme.colorScheme.onSurface.withOpacity(0.6),
+                            ),
                           ),
                         ),
                       ),
                     Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 16,
-                        vertical: 12,
-                      ),
-                      decoration: BoxDecoration(
-                        color: Theme.of(context).scaffoldBackgroundColor,
-                        borderRadius: const BorderRadius.vertical(
-                          bottom: Radius.circular(20),
-                        ),
-                      ),
+                      padding: const EdgeInsets.all(16),
                       child: ElevatedButton.icon(
-                        onPressed:
-                            _isProcessing ? null : _showImageSourceDialog,
+                        onPressed: (_isOCRProcessing || _isUploadProcessing)
+                            ? null
+                            : _showImageSourceDialog,
                         icon: Icon(
-                          _isProcessing
+                          _isOCRProcessing || _isUploadProcessing
                               ? Icons.hourglass_bottom
                               : Icons.camera_alt,
-                          color: _isProcessing ? Colors.white60 : Colors.white,
+                          color: Colors.white,
                         ),
                         label: Text(
-                          _isProcessing ? 'Processing...' : 'Scan Product',
-                          style: TextStyle(
-                            color:
-                                _isProcessing ? Colors.white60 : Colors.white,
-                          ),
+                          _isOCRProcessing
+                              ? 'Processing OCR...'
+                              : _isUploadProcessing
+                                  ? 'Uploading...'
+                                  : 'Scan Product',
+                          style: const TextStyle(color: Colors.white),
                         ),
                         style: ElevatedButton.styleFrom(
                           backgroundColor: accentColor,
-                          foregroundColor: Colors.white,
                           padding: const EdgeInsets.symmetric(
                               horizontal: 24, vertical: 14),
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(12),
                           ),
-                          elevation: 2,
-                          shadowColor: accentColor.withOpacity(0.3),
                         ),
                       ),
                     ),
@@ -577,385 +509,119 @@ class _AddProductOcrScreenState extends ConsumerState<AddProductOcrScreen> {
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(20),
               ),
-              child: Container(
-                decoration: BoxDecoration(
-                  color: containerBgColor,
-                  borderRadius: BorderRadius.circular(20),
-                ),
+              child: Padding(
+                padding: const EdgeInsets.all(16),
                 child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    Padding(
-                      padding: const EdgeInsets.all(16),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            'Basic Information',
-                            style: theme.textTheme.titleMedium?.copyWith(
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                          const SizedBox(height: 16),
-                          Directionality(
-                            textDirection: TextDirection.ltr,
-                            child: TextFormField(
-                              controller: _nameController,
-                              decoration: InputDecoration(
-                                labelText: 'Product Name',
-                                hintText: 'e.g., diflam',
-                                prefixIcon: Icon(
-                                  Icons.medical_services,
-                                  color: theme.colorScheme.onSurface
-                                      .withOpacity(0.7),
-                                ),
-                                border: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(12),
-                                  borderSide: BorderSide(
-                                    color: inputBorderColor,
-                                    width: 1.5,
-                                  ),
-                                ),
-                                focusedBorder: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(12),
-                                  borderSide: BorderSide(
-                                    color: accentColor,
-                                    width: 2,
-                                  ),
-                                ),
-                                enabledBorder: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(12),
-                                  borderSide: BorderSide(
-                                    color: inputBorderColor,
-                                    width: 1.5,
-                                  ),
-                                ),
-                                filled: true,
-                                fillColor: inputBgColor,
-                                contentPadding: const EdgeInsets.symmetric(
-                                  horizontal: 16,
-                                  vertical: 14,
-                                ),
-                              ),
-                              style: theme.textTheme.titleMedium,
-                            ),
-                          ),
-                          const SizedBox(height: 16),
-                          Directionality(
-                            textDirection: TextDirection.ltr,
-                            child: TextFormField(
-                              controller: _companyController,
-                              decoration: InputDecoration(
-                                labelText: 'Company',
-                                hintText: 'e.g., Adwia',
-                                prefixIcon: Icon(
-                                  Icons.business,
-                                  color: theme.colorScheme.onSurface
-                                      .withOpacity(0.7),
-                                ),
-                                border: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(12),
-                                  borderSide: BorderSide(
-                                    color: inputBorderColor,
-                                    width: 1.5,
-                                  ),
-                                ),
-                                focusedBorder: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(12),
-                                  borderSide: BorderSide(
-                                    color: accentColor,
-                                    width: 2,
-                                  ),
-                                ),
-                                enabledBorder: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(12),
-                                  borderSide: BorderSide(
-                                    color: inputBorderColor,
-                                    width: 1.5,
-                                  ),
-                                ),
-                                filled: true,
-                                fillColor: inputBgColor,
-                                contentPadding: const EdgeInsets.symmetric(
-                                  horizontal: 16,
-                                  vertical: 14,
-                                ),
-                              ),
-                              style: theme.textTheme.titleMedium,
-                            ),
-                          ),
-                          const SizedBox(height: 16),
-                          Directionality(
-                            textDirection: TextDirection.ltr,
-                            child: TextFormField(
-                              controller: _activePrincipleController,
-                              decoration: InputDecoration(
-                                labelText: 'Active Principle',
-                                hintText: 'e.g., Amoxicillin',
-                                prefixIcon: Icon(
-                                  Icons.science,
-                                  color: theme.colorScheme.onSurface
-                                      .withOpacity(0.7),
-                                ),
-                                border: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(12),
-                                  borderSide: BorderSide(
-                                    color: inputBorderColor,
-                                    width: 1.5,
-                                  ),
-                                ),
-                                focusedBorder: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(12),
-                                  borderSide: BorderSide(
-                                    color: accentColor,
-                                    width: 2,
-                                  ),
-                                ),
-                                enabledBorder: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(12),
-                                  borderSide: BorderSide(
-                                    color: inputBorderColor,
-                                    width: 1.5,
-                                  ),
-                                ),
-                                filled: true,
-                                fillColor: inputBgColor,
-                                contentPadding: const EdgeInsets.symmetric(
-                                  horizontal: 16,
-                                  vertical: 14,
-                                ),
-                              ),
-                              style: theme.textTheme.titleMedium,
-                            ),
-                          ),
-                        ],
+                    _buildTextField(
+                        'Product Name',
+                        Icons.medical_services,
+                        _nameController,
+                        inputBgColor,
+                        inputBorderColor,
+                        accentColor),
+                    const SizedBox(height: 16),
+                    _buildTextField(
+                        'Company',
+                        Icons.business,
+                        _companyController,
+                        inputBgColor,
+                        inputBorderColor,
+                        accentColor),
+                    const SizedBox(height: 16),
+                    _buildTextField(
+                        'Active Principle',
+                        Icons.science,
+                        _activePrincipleController,
+                        inputBgColor,
+                        inputBorderColor,
+                        accentColor),
+                    const SizedBox(height: 16),
+                    _buildTextField(
+                        'Package Description',
+                        Icons.content_paste,
+                        _packageController,
+                        inputBgColor,
+                        inputBorderColor,
+                        accentColor),
+                    const SizedBox(height: 16),
+                    DropdownButtonFormField<String>(
+                      value: _selectedPackageType,
+                      decoration: InputDecoration(
+                        labelText: 'Package Type',
+                        prefixIcon: Icon(
+                          FontAwesomeIcons.boxesStacked,
+                          size: 20,
+                          color: accentColor,
+                        ),
+                        filled: true,
+                        fillColor: inputBgColor,
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: BorderSide(color: inputBorderColor),
+                        ),
                       ),
-                    ),
-                    Container(
-                      height: 1,
-                      color: inputBorderColor,
-                      margin: const EdgeInsets.only(right: 16, left: 16),
-                    ),
-                    Padding(
-                      padding: const EdgeInsets.all(16),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            'Package Details',
-                            style: theme.textTheme.titleMedium?.copyWith(
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                          const SizedBox(height: 16),
-                          Directionality(
-                            textDirection: TextDirection.ltr,
-                            child: TextFormField(
-                              controller: _packageController,
-                              decoration: InputDecoration(
-                                labelText: 'Package Description',
-                                hintText: 'e.g., 100 mL or 50 ml',
-                                prefixIcon: Icon(
-                                  Icons.content_paste,
-                                  color: theme.colorScheme.onSurface
-                                      .withOpacity(0.7),
-                                ),
-                                border: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(12),
-                                  borderSide: BorderSide(
-                                    color: inputBorderColor,
-                                    width: 1.5,
-                                  ),
-                                ),
-                                focusedBorder: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(12),
-                                  borderSide: BorderSide(
-                                    color: accentColor,
-                                    width: 2,
-                                  ),
-                                ),
-                                enabledBorder: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(12),
-                                  borderSide: BorderSide(
-                                    color: inputBorderColor,
-                                    width: 1.5,
-                                  ),
-                                ),
-                                filled: true,
-                                fillColor: inputBgColor,
-                                contentPadding: const EdgeInsets.symmetric(
-                                  horizontal: 16,
-                                  vertical: 14,
-                                ),
-                              ),
-                              style: theme.textTheme.titleMedium,
-                            ),
-                          ),
-                          const SizedBox(height: 16),
-                          DropdownButtonFormField<String>(
-                            value: _selectedPackageType,
-                            decoration: InputDecoration(
-                              labelText: 'Package Type',
-                              prefixIcon: Icon(
-                                FontAwesomeIcons.boxesPacking,
-                                color: theme.colorScheme.onSurface
-                                    .withOpacity(0.7),
-                              ),
-                              border: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(12),
-                                borderSide: BorderSide(
-                                  color: inputBorderColor,
-                                  width: 1.5,
-                                ),
-                              ),
-                              focusedBorder: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(12),
-                                borderSide: BorderSide(
-                                  color: accentColor,
-                                  width: 2,
-                                ),
-                              ),
-                              enabledBorder: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(12),
-                                borderSide: BorderSide(
-                                  color: inputBorderColor,
-                                  width: 1.5,
-                                ),
-                              ),
-                              filled: true,
-                              fillColor: inputBgColor,
-                              contentPadding: const EdgeInsets.symmetric(
-                                horizontal: 16,
-                                vertical: 14,
-                              ),
-                            ),
-                            items: _packageTypes.map((String type) {
-                              return DropdownMenuItem<String>(
+                      items: _packageTypes
+                          .map((type) => DropdownMenuItem<String>(
                                 value: type,
-                                child: Row(
-                                  children: [
-                                    Icon(
-                                      _getPackageIconData(type),
-                                      size: 18,
-                                      color: theme.colorScheme.onSurface
-                                          .withOpacity(0.7),
-                                    ),
-                                    const SizedBox(width: 8),
-                                    Text(type),
-                                  ],
-                                ),
-                              );
-                            }).toList(),
-                            onChanged: (String? newValue) {
-                              setState(() {
-                                _selectedPackageType = newValue;
-                              });
-                              _validateForm();
-                            },
-                          ),
-                          const SizedBox(height: 16),
-                          Directionality(
-                            textDirection: TextDirection.ltr,
-                            child: TextFormField(
-                              controller: _priceController,
-                              decoration: InputDecoration(
-                                labelText: 'Price',
-                                hintText: 'Enter price in EGP',
-                                prefixIcon: Icon(
-                                  Icons.price_check,
-                                  color: theme.colorScheme.onSurface
-                                      .withOpacity(0.7),
-                                ),
-                                suffixText: 'EGP',
-                                suffixStyle: TextStyle(
-                                  color: priceColor,
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 16,
-                                ),
-                                border: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(12),
-                                  borderSide: BorderSide(
-                                    color: inputBorderColor,
-                                    width: 1.5,
-                                  ),
-                                ),
-                                focusedBorder: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(12),
-                                  borderSide: BorderSide(
-                                    color: accentColor,
-                                    width: 2,
-                                  ),
-                                ),
-                                enabledBorder: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(12),
-                                  borderSide: BorderSide(
-                                    color: inputBorderColor,
-                                    width: 1.5,
-                                  ),
-                                ),
-                                filled: true,
-                                fillColor: inputBgColor,
-                                contentPadding: const EdgeInsets.symmetric(
-                                  horizontal: 16,
-                                  vertical: 14,
-                                ),
-                              ),
-                              keyboardType: TextInputType.number,
-                              style: TextStyle(
-                                color: priceColor,
-                                fontSize: 16,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
+                                child: Text(type),
+                              ))
+                          .toList(),
+                      onChanged: (value) {
+                        setState(() => _selectedPackageType = value);
+                        _validateForm();
+                      },
                     ),
+                    const SizedBox(height: 16),
+                    _buildTextField(
+                        'Price',
+                        Icons.attach_money,
+                        _priceController,
+                        inputBgColor,
+                        inputBorderColor,
+                        priceColor,
+                        keyboardType: TextInputType.number),
+                    saveButton,
                   ],
                 ),
               ),
             ),
-            const SizedBox(height: 24),
-            saveButton,
           ],
         ),
       ),
     );
   }
 
-  IconData _getPackageIconData(String type) {
-    switch (type) {
-      case 'bottle':
-        return FontAwesomeIcons.prescriptionBottle;
-      case 'vial':
-        return FontAwesomeIcons.vial;
-      case 'tab':
-        return FontAwesomeIcons.tablet;
-      case 'amp':
-        return FontAwesomeIcons.syringe;
-      case 'sachet':
-        return FontAwesomeIcons.sackXmark;
-      case 'strip':
-        return FontAwesomeIcons.list;
-      case 'box':
-        return FontAwesomeIcons.box;
-
-      case 'cream':
-        return FontAwesomeIcons.cheese;
-      case 'gel':
-        return FontAwesomeIcons.flask;
-      case 'spray':
-        return FontAwesomeIcons.sprayCan;
-      case 'drops':
-        return FontAwesomeIcons.droplet;
-      case 'suppository':
-        return FontAwesomeIcons.pills;
-      case 'injection':
-        return FontAwesomeIcons.syringe;
-      case 'kit':
-        return FontAwesomeIcons.suitcaseMedical;
-      default:
-        return FontAwesomeIcons.box;
-    }
+  Widget _buildTextField(
+    String label,
+    IconData icon,
+    TextEditingController controller,
+    Color bgColor,
+    Color borderColor,
+    Color iconColor, {
+    TextInputType? keyboardType,
+  }) {
+    return TextField(
+      controller: controller,
+      keyboardType: keyboardType ?? TextInputType.text,
+      decoration: InputDecoration(
+        labelText: label,
+        prefixIcon: Icon(icon, color: iconColor),
+        filled: true,
+        fillColor: bgColor,
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide(color: borderColor),
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide(color: borderColor),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide(color: iconColor, width: 2),
+        ),
+      ),
+    );
   }
 }
