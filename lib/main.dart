@@ -8,11 +8,16 @@ import 'features/authentication/presentation/screens/auth_gate.dart';
 import 'firebase_options.dart';
 import 'core/theme/app_theme.dart';
 import 'core/localization/language_provider.dart';
+import 'features/authentication/data/storage_service.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
   await EasyLocalization.ensureInitialized();
+
+  // 👇 تنظيف الصور المؤقتة عند بداية التشغيل
+  final storage = StorageService();
+  await storage.cleanupTempImages();
 
   runApp(
     ProviderScope(
