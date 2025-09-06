@@ -40,44 +40,43 @@ dependencies:
   flutter_image_compress: ^2.3.0
   path_provider: ^2.1.5
   http: ^1.2.1
+  crypto: ^3.0.6
 
 dev_dependencies:
   flutter_test:
     sdk: flutter
   flutter_lints: ^6.0.0
-  # حزمة الشاشة الابتدائية توضع هنا
- # pubspec.yaml
+  flutter_launcher_icons: ^0.13.1
   flutter_native_splash: ^2.4.0
-  
 
 flutter_native_splash:
-  # --- Light Mode Settings ---
-  color: "#f3f4f7"  # Your light mode background color
-  image: assets/logo_light.png # Logo for light mode
+  
+  color: "#f2fcff"
+  image: assets/logo_light.png
+  color_dark: "#1d232a"
+  image_dark: assets/logo_dark.png
 
-  # --- Dark Mode Settings ---
-  color_dark: "#2E3A48" # Your dark mode background color
-  image_dark: assets/logo_dark.png # Logo for dark mode
-
-  # Settings for Android 12+
   android_12:
-    color: "#f3f4f7"
+   
+    color: "#f2fcff"
     image: assets/logo_light.png
-
-    color_dark: "#2E3A48"
+    color_dark: "#1d232a"
     image_dark: assets/logo_dark.png
-# --- قسم فلاتر الموحد والصحيح ---
+
 flutter:
   uses-material-design: true
   assets:
-    # هذا السطر كافٍ لتضمين كل ما في مجلد assets
     - assets/
-    - assets/translations/ # <-- أضف هذا السطر
-    
+    - assets/translations/
 
 fonts:
   - family: Cairo
     fonts:
       - asset: assets/fonts/Cairo-Regular.ttf
       - asset: assets/fonts/Cairo-Bold.ttf
-        weight: 700    
+        weight: 700
+
+flutter_launcher_icons:
+  android: "launcher_icon"
+  ios: true
+  image_path: "assets/app_icon.png"

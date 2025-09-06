@@ -20,10 +20,10 @@
     </queries>
 
     <application
-        android:label="fieldawy_store"
+        android:label="Fieldawy Store"
         android:name="${applicationName}"
         android:requestLegacyExternalStorage="true" 
-        android:icon="@mipmap/ic_launcher">
+        android:icon="@mipmap/launcher_icon">
         <activity
             android:name=".MainActivity"
             android:exported="true"

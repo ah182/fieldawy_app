@@ -4,11 +4,13 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 // ignore: unused_import
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:easy_localization/easy_localization.dart';
+// ignore: unused_import
 import 'features/authentication/presentation/screens/auth_gate.dart';
 import 'firebase_options.dart';
 import 'core/theme/app_theme.dart';
 import 'core/localization/language_provider.dart';
 import 'features/authentication/data/storage_service.dart';
+
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
