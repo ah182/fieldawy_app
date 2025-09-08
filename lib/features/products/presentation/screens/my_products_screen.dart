@@ -13,6 +13,8 @@ import 'package:fieldawy_store/features/products/domain/product_model.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:fieldawy_store/features/authentication/services/auth_service.dart';
 
+import 'package:fieldawy_store/widgets/main_scaffold.dart';
+
 class MyProductsScreen extends HookConsumerWidget {
   // <= غيرنا لـ HookConsumerWidget
   const MyProductsScreen({super.key});
@@ -191,11 +193,37 @@ class MyProductsScreen extends HookConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     // === استدعاء الـ Provider اللي بيجيب قائمة "أدويةي" ===
     final myProductsAsync = ref.watch(myProductsProvider);
+    final userRole = ref.watch(userDataProvider).asData?.value?.role ?? '';
+
+    if (userRole != 'distributor') {
+      return Scaffold(
+        appBar: AppBar(title: Text('myMedicines'.tr())),
+        body: Center(
+          child: Text('This page is only for distributors.'.tr()),
+        ),
+      );
+    }
 
     // === متغير علشان نسيط نص البحث ===
     final searchQuery = useState<String>(''); // <= متغير البحث
 
-    return Scaffold(
+    return MainScaffold(
+      selectedIndex: 0,
+      floatingActionButton: FloatingActionButton.extended(
+        onPressed: () {
+          _showAddProductOptions(context);
+        },
+        label: Text('addProduct'.tr()),
+        icon: const Icon(Icons.add),
+        elevation: 4,
+        backgroundColor: Theme.of(context).brightness == Brightness.light
+            ? const Color.fromARGB(
+                255, 44, 214, 223) // لون أزرق أكتر صفاءً للوضع النهاري (kBlue)
+            : Theme.of(context).brightness == Brightness.dark
+                ? const Color.fromARGB(255, 31, 115, 151)
+                : Theme.of(context).colorScheme.primary,
+        foregroundColor: Colors.white,
+      ),
       // === تعديل AppBar علشان يحتوي على SearchBar وعداد المنتجات ===
       appBar: AppBar(
         title: Text('myMedicines'.tr()),
@@ -318,21 +346,6 @@ class MyProductsScreen extends HookConsumerWidget {
             ],
           ),
         ),
-      ),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: () {
-          _showAddProductOptions(context);
-        },
-        label: Text('addProduct'.tr()),
-        icon: const Icon(Icons.add),
-        elevation: 4,
-        backgroundColor: Theme.of(context).brightness == Brightness.light
-            ? const Color.fromARGB(
-                255, 44, 214, 223) // لون أزرق أكتر صفاءً للوضع النهاري (kBlue)
-            : Theme.of(context).brightness == Brightness.dark
-                ? const Color.fromARGB(255, 31, 115, 151)
-                : Theme.of(context).colorScheme.primary,
-        foregroundColor: Colors.white,
       ),
       body: myProductsAsync.when(
         data: (products) {
