@@ -1,4 +1,6 @@
-// ملف: lib/features/distributors/presentation/screens/distributors_screen.dart
+// ignore: unused_import
+import 'package:fieldawy_store/features/home/application/user_data_provider.dart';
+import 'package:fieldawy_store/widgets/main_scaffold.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
@@ -109,6 +111,8 @@ class DistributorsScreen extends HookConsumerWidget {
     final searchQuery = useState<String>('');
     final searchController = useTextEditingController();
 
+    final selectedIndex = 0;
+
     final filteredDistributors = useMemoized(
       () {
         final distributors = distributorsAsync.asData?.value;
@@ -129,8 +133,8 @@ class DistributorsScreen extends HookConsumerWidget {
       [distributorsAsync, searchQuery.value],
     );
 
-    return Scaffold(
-      backgroundColor: theme.colorScheme.surface,
+    return MainScaffold(
+      selectedIndex: selectedIndex,
       appBar: AppBar(
         elevation: 0,
         backgroundColor: theme.colorScheme.surface,

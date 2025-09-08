@@ -91,10 +91,7 @@ class MenuScreen extends ConsumerWidget {
             icon: Icons.category_outlined,
             title: 'category'.tr(),
             onTap: () {}),
-        _buildMenuItem(
-            icon: Icons.chat_bubble_outline,
-            title: 'chatMode'.tr(),
-            onTap: () {}),
+       
         _buildMenuItem(
             icon: Icons.person_outline,
             title: 'profile'.tr(),
@@ -138,10 +135,7 @@ class MenuScreen extends ConsumerWidget {
             icon: Icons.category_outlined,
             title: 'category'.tr(),
             onTap: () {}),
-        _buildMenuItem(
-            icon: Icons.chat_bubble_outline,
-            title: 'chatMode'.tr(),
-            onTap: () {}),
+       
         _buildMenuItem(
             icon: Icons.person_outline,
             title: 'profile'.tr(),

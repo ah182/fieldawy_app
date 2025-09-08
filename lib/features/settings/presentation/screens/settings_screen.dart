@@ -1,7 +1,11 @@
 import 'package:easy_localization/easy_localization.dart';
 import 'package:fieldawy_store/core/theme/app_theme.dart';
+// ignore: unused_import
+import 'package:fieldawy_store/features/home/application/user_data_provider.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+
+import 'package:fieldawy_store/widgets/main_scaffold.dart';
 
 class SettingsScreen extends ConsumerWidget {
   const SettingsScreen({super.key});
@@ -10,14 +14,15 @@ class SettingsScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final currentThemeMode = ref.watch(themeNotifierProvider);
     final textTheme = Theme.of(context).textTheme;
+    final selectedIndex = 3;
 
     // دالة مساعدة لتغيير الثيم لتجنب تكرار الكود
     void changeTheme(ThemeMode mode) {
       ref.read(themeNotifierProvider.notifier).setThemeMode(mode);
     }
 
-    return Scaffold(
-      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+    return MainScaffold(
+      selectedIndex: selectedIndex,
       appBar: AppBar(
         title: Text('settings'.tr()),
         backgroundColor: Colors.transparent,

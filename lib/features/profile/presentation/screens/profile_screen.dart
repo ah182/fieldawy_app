@@ -6,6 +6,8 @@ import 'package:fieldawy_store/features/settings/presentation/screens/settings_s
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import 'package:fieldawy_store/widgets/main_scaffold.dart';
+
 class ProfileScreen extends ConsumerWidget {
   const ProfileScreen({super.key});
 
@@ -14,9 +16,10 @@ class ProfileScreen extends ConsumerWidget {
     final userDataAsync = ref.watch(userDataProvider);
     final textTheme = Theme.of(context).textTheme;
     final colorScheme = Theme.of(context).colorScheme;
+    final selectedIndex = 2;
 
-    return Scaffold(
-      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+    return MainScaffold(
+      selectedIndex: selectedIndex,
       appBar: AppBar(
         title: Text('profile'.tr()),
         backgroundColor: Colors.transparent,
