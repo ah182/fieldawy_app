@@ -6,6 +6,7 @@ import 'package:salomon_bottom_bar/salomon_bottom_bar.dart';
 import 'package:fieldawy_store/features/category/presentation/screens/category_screen.dart';
 import 'package:fieldawy_store/features/distributors/presentation/screens/distributors_screen.dart';
 import 'package:fieldawy_store/features/products/presentation/screens/my_products_screen.dart';
+import 'package:fieldawy_store/features/dashboard/presentation/pages/dashboard_page.dart';
 import 'package:fieldawy_store/features/profile/presentation/screens/profile_screen.dart';
 import 'package:fieldawy_store/features/settings/presentation/screens/settings_screen.dart';
 
@@ -35,7 +36,7 @@ class MainScaffold extends ConsumerWidget {
           screen = const MyProductsScreen();
           break;
         case 1:
-          screen = const CategoryScreen();
+          screen = const DashboardPage();
           break;
         case 2:
           screen = const ProfileScreen();
@@ -106,11 +107,18 @@ class MainScaffold extends ConsumerWidget {
                   title: const Text("Distributors"),
                   selectedColor: Colors.orange,
                 ),
-              SalomonBottomBarItem(
-                icon: const Icon(Icons.category),
-                title: const Text("Categories"),
-                selectedColor: Colors.pink,
-              ),
+              if (isDistributor)
+                SalomonBottomBarItem(
+                  icon: const Icon(Icons.dashboard),
+                  title: const Text("Dashboard"),
+                  selectedColor: Colors.pink,
+                )
+              else
+                SalomonBottomBarItem(
+                  icon: const Icon(Icons.category),
+                  title: const Text("Categories"),
+                  selectedColor: Colors.pink,
+                ),
               SalomonBottomBarItem(
                 icon: const Icon(Icons.person),
                 title: const Text("Profile"),
