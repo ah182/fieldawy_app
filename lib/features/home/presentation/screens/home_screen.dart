@@ -9,8 +9,12 @@ import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:fieldawy_store/features/products/domain/product_model.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:fieldawy_store/widgets/shimmer_loader.dart';
 import 'dart:math';
 import 'dart:ui' as ui;
+
+import '../../application/user_data_provider.dart';
+import 'package:fieldawy_store/features/profile/presentation/screens/profile_screen.dart';
 
 class HomeScreen extends HookConsumerWidget {
   const HomeScreen({super.key});
@@ -112,6 +116,7 @@ class HomeScreen extends HookConsumerWidget {
     }
 
     // ألوان حسب الثيم
+    // ignore: unused_local_variable
     final backgroundGradient = isDark
         ? LinearGradient(
             colors: [
@@ -138,14 +143,17 @@ class HomeScreen extends HookConsumerWidget {
         isDark ? Colors.lightGreenAccent.shade200 : Colors.green.shade700;
     final favoriteColor =
         isDark ? Colors.redAccent.shade100 : Colors.red.shade400;
-    final packageBgColor = isDark
-        ? const Color.fromARGB(255, 239, 241, 251).withOpacity(0.1)
+   final packageBgColor = isDark
+        ? const Color.fromARGB(255, 216, 222, 249).withOpacity(0.1)
         : Colors.blue.shade50.withOpacity(0.8);
-    final packageBorderColor =
-        isDark ? Colors.grey.shade600 : Colors.blue.shade200;
+    final packageBorderColor = isDark
+        ? const Color.fromARGB(255, 102, 126, 162)
+        : Colors.blue.shade200;
     final imageBgColor = isDark
         ? const Color.fromARGB(255, 21, 15, 15).withOpacity(0.3)
         : Colors.white.withOpacity(0.7);
+        final backgroundColor =
+        isDark ? const Color(0xFF1E1E2E) : const Color(0xFFE3F2FD);
 
     return Dialog(
       backgroundColor: Colors.transparent,
@@ -154,7 +162,7 @@ class HomeScreen extends HookConsumerWidget {
         width: isSmallScreen ? size.width * 0.95 : 400,
         height: size.height * 0.85,
         decoration: BoxDecoration(
-          gradient: backgroundGradient,
+         color: backgroundColor,
           borderRadius: BorderRadius.circular(30),
           boxShadow: [
             BoxShadow(
@@ -314,11 +322,10 @@ class HomeScreen extends HookConsumerWidget {
                       child: CachedNetworkImage(
                         imageUrl: product.imageUrl,
                         fit: BoxFit.contain,
-                        placeholder: (context, url) => Center(
-                          child: CircularProgressIndicator(
-                            color: theme.colorScheme.primary,
-                          ),
-                        ),
+                        placeholder: (context, url) => const Center(
+                              child: ImageLoadingIndicator(
+                            size: 50,
+                          )),
                         errorWidget: (context, url, error) => Icon(
                           Icons.broken_image_outlined,
                           size: 60,
@@ -332,7 +339,7 @@ class HomeScreen extends HookConsumerWidget {
 
                   // === وصف المنتج ===
                   Text(
-                    'Description',
+                    'Active principle',
                     style: theme.textTheme.titleLarge?.copyWith(
                       fontSize: 18,
                       fontWeight: FontWeight.w900,
@@ -346,7 +353,7 @@ class HomeScreen extends HookConsumerWidget {
                     text: TextSpan(
                       children: [
                         TextSpan(
-                          text: 'المادة الفعالة: ',
+                          text: '',
                           style: theme.textTheme.bodyMedium?.copyWith(
                             color: theme.colorScheme.onSurface,
                             fontWeight: FontWeight.w600,
@@ -368,29 +375,42 @@ class HomeScreen extends HookConsumerWidget {
                   // === حجم العبوة مُصغر بدون كلمة Size ===
                   if (product.selectedPackage != null &&
                       product.selectedPackage!.isNotEmpty)
-                    Align(
+                   Align(
                       alignment: Alignment.centerLeft,
                       child: Container(
                         padding: const EdgeInsets.symmetric(
                             horizontal: 12, vertical: 6),
                         decoration: BoxDecoration(
                           color: packageBgColor,
-                          borderRadius: BorderRadius.circular(16),
+                          borderRadius: BorderRadius.circular(14),
                           border: Border.all(
                             color: packageBorderColor,
                             width: 1,
                           ),
                         ),
-                        child: Directionality(
-                          textDirection: ui.TextDirection.ltr,
-                          child: Text(
-                            formatPackageText(product.selectedPackage!),
-                            style: theme.textTheme.bodyMedium?.copyWith(
-                              fontWeight: FontWeight.w600,
-                              color: theme.colorScheme.primary,
-                              fontSize: 13,
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(
+                              Icons.inventory_2_outlined,
+                              size: 20,
+                              color: isDark
+                                  ? const Color.fromARGB(255, 6, 149, 245)
+                                  : const Color.fromARGB(255, 4, 90, 160),
                             ),
-                          ),
+                            const SizedBox(width: 8),
+                            Directionality(
+                              textDirection: ui.TextDirection.ltr,
+                              child: Text(
+                                formatPackageText(product.selectedPackage!),
+                                style: theme.textTheme.bodyMedium?.copyWith(
+                                  fontWeight: FontWeight.w600,
+                                  color: theme.colorScheme.primary,
+                                  fontSize: 13,
+                                ),
+                              ),
+                            ),
+                          ],
                         ),
                       ),
                     ),
@@ -511,224 +531,318 @@ class HomeScreen extends HookConsumerWidget {
     final searchQuery = useState<String>('');
     final searchController = useTextEditingController();
 
-    return Scaffold(
-      appBar: AppBar(
-        leading: IconButton(
-          icon: const Icon(Icons.menu),
-          onPressed: () => ZoomDrawer.of(context)!.toggle(),
+    final sliverAppBar = SliverAppBar(
+      leading: IconButton(
+        icon: const Icon(Icons.menu),
+        onPressed: () => ZoomDrawer.of(context)!.toggle(),
+      ),
+      title: Text('homeScreen'.tr()),
+      elevation: 2,
+      pinned: true,
+      actions: [
+        Consumer(
+          builder: (context, ref, child) {
+            final userDataAsync = ref.watch(userDataProvider);
+            return userDataAsync.when(
+              data: (user) {
+                if (user?.photoURL != null && user!.photoURL!.isNotEmpty) {
+                  return Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 18.0).add(const EdgeInsets.only(top: 4.0)),
+                    child: GestureDetector(
+                      onTap: () {
+                        Navigator.of(context).push(
+                          MaterialPageRoute(
+                            builder: (context) => const ProfileScreen(),
+                          ),
+                        );
+                      },
+                      child: Container(
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          border: Border.all(
+                            color: Theme.of(context).colorScheme.primary,
+                            width: 2,
+                          ),
+                        ),
+                        child: CircleAvatar(
+                          radius: 16,
+                          backgroundColor: Theme.of(context).colorScheme.surface,
+                          child: ClipOval(
+                            child: CachedNetworkImage(
+                              imageUrl: user.photoURL!,
+                              width: 29,
+                              height: 29,
+                              fit: BoxFit.contain,
+                              placeholder: (context, url) => Container(
+                                width: 29,
+                                height: 29,
+                                decoration: BoxDecoration(
+                                  color: Theme.of(context).colorScheme.primary.withOpacity(0.1),
+                                  shape: BoxShape.circle,
+                                ),
+                                child: Icon(
+                                  Icons.person,
+                                  size: 16,
+                                  color: Theme.of(context).colorScheme.primary,
+                                ),
+                              ),
+                              errorWidget: (context, url, error) => Container(
+                                width: 32,
+                                height: 32,
+                                decoration: BoxDecoration(
+                                  color: Theme.of(context).colorScheme.primary.withOpacity(0.1),
+                                  shape: BoxShape.circle,
+                                ),
+                                child: Icon(
+                                  Icons.person,
+                                  size: 16,
+                                  color: Theme.of(context).colorScheme.primary,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  );
+                } else {
+                  return const SizedBox.shrink();
+                }
+              },
+              loading: () => const SizedBox.shrink(),
+              error: (error, stack) => const SizedBox.shrink(),
+            );
+          },
         ),
-        title: Text('homeScreen'.tr()),
-        elevation: 2,
-        // إضافة شريط البحث في AppBar
-        bottom: PreferredSize(
-          preferredSize: const Size.fromHeight(kToolbarHeight + 50.0),
-          child: Column(
-            children: [
-              // === شريط البحث المُصحح ===
-              Padding(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
-                child: TextField(
-                  controller: searchController, // إضافة الـ controller
-                  onChanged: (value) {
-                    searchQuery.value = value; // تحديث حالة البحث
-                  },
-                  decoration: InputDecoration(
-                    hintText: 'ابحث عن دواء، مادة فعالة...',
-                    hintStyle: Theme.of(context).textTheme.bodySmall?.copyWith(
+      ],
+      bottom: PreferredSize(
+        preferredSize: const Size.fromHeight(kToolbarHeight + 50.0),
+        child: Column(
+          children: [
+            // === شريط البحث المُصحح ===
+            Padding(
+              padding:
+                  const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+              child: TextField(
+                controller: searchController, // إضافة الـ controller
+                onChanged: (value) {
+                  searchQuery.value = value; // تحديث حالة البحث
+                },
+                decoration: InputDecoration(
+                  hintText: 'ابحث عن دواء، مادة فعالة...',
+                  hintStyle: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: Theme.of(context)
+                            .colorScheme
+                            .onSurface
+                            .withOpacity(0.6),
+                      ),
+                  prefixIcon: Icon(
+                    Icons.search,
+                    color: Theme.of(context).colorScheme.primary,
+                  ),
+                  suffixIcon: searchQuery.value.isNotEmpty
+                      ? IconButton(
+                          icon: const Icon(Icons.clear),
+                          onPressed: () {
+                            // الحل الصحيح للمسح
+                            searchController
+                                .clear(); // مسح النص من الـ TextField
+                            searchQuery.value = ''; // تحديث حالة البحث
+                          },
+                        )
+                      : Icon(
+                          Icons.tune,
                           color: Theme.of(context)
                               .colorScheme
                               .onSurface
-                              .withOpacity(0.6),
+                              .withOpacity(0.5),
                         ),
-                    prefixIcon: Icon(
-                      Icons.search,
-                      color: Theme.of(context).colorScheme.primary,
-                    ),
-                    suffixIcon: searchQuery.value.isNotEmpty
-                        ? IconButton(
-                            icon: const Icon(Icons.clear),
-                            onPressed: () {
-                              // الحل الصحيح للمسح
-                              searchController
-                                  .clear(); // مسح النص من الـ TextField
-                              searchQuery.value = ''; // تحديث حالة البحث
-                            },
-                          )
-                        : Icon(
-                            Icons.tune,
-                            color: Theme.of(context)
-                                .colorScheme
-                                .onSurface
-                                .withOpacity(0.5),
-                          ),
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(30.0),
-                      borderSide: BorderSide.none,
-                    ),
-                    filled: true,
-                    fillColor: Theme.of(context).colorScheme.surfaceVariant,
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(30.0),
+                    borderSide: BorderSide.none,
                   ),
+                  filled: true,
+                  fillColor: Theme.of(context).colorScheme.surfaceVariant,
                 ),
               ),
-              const SizedBox(height: 8),
-            ],
-          ),
+            ),
+            const SizedBox(height: 8),
+          ],
         ),
       ),
-      body: productsAsync.when(
-        data: (products) {
-          // إذا لم تكن هناك منتجات، اعرض رسالة
-          if (products.isEmpty) {
-            return Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(
-                    Icons.inventory_2_outlined,
-                    size: 80,
-                    color:
-                        Theme.of(context).colorScheme.primary.withOpacity(0.5),
-                  ),
-                  const SizedBox(height: 16),
-                  Text(
-                    'لا توجد منتجات متاحة حاليًا.',
-                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                          color: Theme.of(context)
-                              .colorScheme
-                              .onSurface
-                              .withOpacity(0.7),
-                        ),
-                  ),
-                ],
-              ),
-            );
-          }
+    );
 
-          // === فلترة المنتجات حسب البحث المحسن ===
-          List<ProductModel> filteredProducts;
-          if (searchQuery.value.isEmpty) {
-            // إذا لم يكن هناك بحث، اعرض منتجات عشوائية
-            final random = Random();
-            final List<ProductModel> shuffledProducts = List.from(products)
-              ..shuffle(random);
-            filteredProducts = shuffledProducts.length > 25
-                ? shuffledProducts.sublist(0, 25)
-                : shuffledProducts;
-          } else {
-            // فلترة محسنة حسب نص البحث
-            filteredProducts = products.where((product) {
-              final query = searchQuery.value.toLowerCase().trim();
+    return Scaffold(
+      body: RefreshIndicator(
+        onRefresh: () async {
+          ref.invalidate(allDistributorProductsProvider);
+          await ref.read(allDistributorProductsProvider.future);
+        },
+        child: productsAsync.when(
+          data: (products) {
+            // === فلترة المنتجات حسب البحث المحسن ===
+            List<ProductModel> filteredProducts;
+            if (searchQuery.value.isEmpty) {
+              // إذا لم يكن هناك بحث، اعرض منتجات عشوائية
+              final random = Random();
+              final List<ProductModel> shuffledProducts = List.from(products)
+                ..shuffle(random);
+              filteredProducts = shuffledProducts.length > 25
+                  ? shuffledProducts.sublist(0, 25)
+                  : shuffledProducts;
+            } else {
+              // فلترة محسنة حسب نص البحث
+              filteredProducts = products.where((product) {
+                final query = searchQuery.value.toLowerCase().trim();
 
-              // === البحث الأساسي ===
-              final productName = product.name.toLowerCase(); // اسم الدواء
-              final distributorName =
-                  (product.distributorId ?? '').toLowerCase(); // اسم الموزع
-              final activePrinciple = (product.activePrinciple ?? '')
-                  .toLowerCase(); // المادة الفعالة
+                // === البحث الأساسي ===
+                final productName = product.name.toLowerCase(); // اسم الدواء
+                final distributorName =
+                    (product.distributorId ?? '').toLowerCase(); // اسم الموزع
+                final activePrinciple = (product.activePrinciple ?? '')
+                    .toLowerCase(); // المادة الفعالة
 
-              // === البحث الإضافي ===
-              final packageSize =
-                  (product.selectedPackage ?? '').toLowerCase(); // حجم العبوة
-              final company =
-                  (product.company ?? '').toLowerCase(); // الشركة المصنعة
-              final description =
-                  (product.description ?? '').toLowerCase(); // وصف المنتج
-              final action = (product.action ?? '').toLowerCase(); // آلية العمل
+                // === البحث الإضافي ===
+                final packageSize =
+                    (product.selectedPackage ?? '').toLowerCase(); // حجم العبوة
+                final company = (product.company ?? '').toLowerCase(); // الشركة المصنعة
+                final description = (product.description ?? '').toLowerCase(); // وصف المنتج
+                final action = (product.action ?? '').toLowerCase(); // آلية العمل
 
-              // === البحث الشامل مع الأولوية ===
-              // أولوية عالية: اسم الدواء، المادة الفعالة، اسم الموزع
-              bool highPriorityMatch = productName.contains(query) ||
-                  activePrinciple.contains(query) ||
-                  distributorName.contains(query);
+                // === البحث الشامل مع الأولوية ===
+                // أولوية عالية: اسم الدواء، المادة الفعالة، اسم الموزع
+                bool highPriorityMatch = productName.contains(query) ||
+                    activePrinciple.contains(query) ||
+                    distributorName.contains(query);
 
-              // أولوية متوسطة: الشركة، العبوة، الوصف
-              bool mediumPriorityMatch = company.contains(query) ||
-                  packageSize.contains(query) ||
-                  description.contains(query);
+                // أولوية متوسطة: الشركة، العبوة، الوصف
+                bool mediumPriorityMatch = company.contains(query) ||
+                    packageSize.contains(query) ||
+                    description.contains(query);
 
-              // أولوية منخفضة: آلية العمل
-              bool lowPriorityMatch = action.contains(query);
+                // أولوية منخفضة: آلية العمل
+                bool lowPriorityMatch = action.contains(query);
 
-              return highPriorityMatch ||
-                  mediumPriorityMatch ||
-                  lowPriorityMatch;
-            }).toList();
+                return highPriorityMatch ||
+                    mediumPriorityMatch ||
+                    lowPriorityMatch;
+              }).toList();
 
-            // === ترتيب النتائج حسب الأولوية ===
-            filteredProducts.sort((a, b) {
-              final query = searchQuery.value.toLowerCase().trim();
+              // === ترتيب النتائج حسب الأولوية ===
+              filteredProducts.sort((a, b) {
+                final query = searchQuery.value.toLowerCase().trim();
 
-              // حساب نقاط الأولوية لكل منتج
-              int scoreA = _calculateSearchScore(a, query);
-              int scoreB = _calculateSearchScore(b, query);
+                // حساب نقاط الأولوية لكل منتج
+                int scoreA = _calculateSearchScore(a, query);
+                int scoreB = _calculateSearchScore(b, query);
 
-              return scoreB.compareTo(scoreA); // ترتيب تنازلي
-            });
-          }
+                return scoreB.compareTo(scoreA); // ترتيب تنازلي
+              });
+            }
 
-          return Column(
-            children: [
-              // === عرض عدد المنتجات المعروضة مع حالة البحث ===
-              Container(
-                width: double.infinity,
-                margin: const EdgeInsets.all(12),
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                decoration: BoxDecoration(
-                  color: searchQuery.value.isEmpty
-                      ? Theme.of(context)
-                          .colorScheme
-                          .primaryContainer
-                          .withOpacity(0.3)
-                      : Theme.of(context)
-                          .colorScheme
-                          .secondaryContainer
-                          .withOpacity(0.3),
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(
-                    color: searchQuery.value.isEmpty
-                        ? Theme.of(context).colorScheme.primary.withOpacity(0.2)
-                        : Theme.of(context)
-                            .colorScheme
-                            .secondary
-                            .withOpacity(0.2),
-                    width: 1,
-                  ),
-                ),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(
-                      searchQuery.value.isEmpty
-                          ? Icons.storefront_outlined
-                          : Icons.search_outlined,
-                      size: 16,
-                      color: searchQuery.value.isEmpty
-                          ? Theme.of(context).colorScheme.primary
-                          : Theme.of(context).colorScheme.secondary,
+            return CustomScrollView(
+              slivers: [
+                sliverAppBar,
+                if (products.isEmpty)
+                  SliverFillRemaining(
+                    child: Center(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            Icons.inventory_2_outlined,
+                            size: 80,
+                            color: Theme.of(context)
+                                .colorScheme
+                                .primary
+                                .withOpacity(0.5),
+                          ),
+                          const SizedBox(height: 16),
+                          Text(
+                            'لا توجد منتجات متاحة حاليًا.',
+                            style: Theme.of(context)
+                                .textTheme
+                                .titleMedium
+                                ?.copyWith(
+                                  color: Theme.of(context)
+                                      .colorScheme
+                                      .onSurface
+                                      .withOpacity(0.7),
+                                ),
+                          ),
+                        ],
+                      ),
                     ),
-                    const SizedBox(width: 8),
-                    Text(
-                      searchQuery.value.isEmpty
-                          ? 'عرض ${filteredProducts.length} منتج من أحدث العروض'
-                          : 'وُجد ${filteredProducts.length} منتج${filteredProducts.length == 1 ? '' : (filteredProducts.length <= 10 ? 'ات' : '')}',
-                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  )
+                else ...[
+                  SliverToBoxAdapter(
+                    child: Container(
+                      width: double.infinity,
+                      margin: const EdgeInsets.all(12),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 12, vertical: 6),
+                      decoration: BoxDecoration(
+                        color: searchQuery.value.isEmpty
+                            ? Theme.of(context)
+                                .colorScheme
+                                .primaryContainer
+                                .withOpacity(0.3)
+                            : Theme.of(context)
+                                .colorScheme
+                                .secondaryContainer
+                                .withOpacity(0.3),
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(
+                          color: searchQuery.value.isEmpty
+                              ? Theme.of(context)
+                                  .colorScheme
+                                  .primary
+                                  .withOpacity(0.2)
+                              : Theme.of(context)
+                                  .colorScheme
+                                  .secondary
+                                  .withOpacity(0.2),
+                          width: 1,
+                        ),
+                      ),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(
+                            searchQuery.value.isEmpty
+                                ? Icons.storefront_outlined
+                                : Icons.search_outlined,
+                            size: 16,
                             color: searchQuery.value.isEmpty
                                 ? Theme.of(context).colorScheme.primary
                                 : Theme.of(context).colorScheme.secondary,
-                            fontWeight: FontWeight.w600,
                           ),
+                          const SizedBox(width: 8),
+                          Text(
+                            searchQuery.value.isEmpty
+                                ? 'عرض ${filteredProducts.length} منتج من أحدث العروض'
+                                : 'وُجد ${filteredProducts.length} منتج${filteredProducts.length == 1 ? '' : (filteredProducts.length <= 10 ? 'ات' : '')}',
+                            style: Theme.of(context)
+                                .textTheme
+                                .bodySmall
+                                ?.copyWith(
+                                  color: searchQuery.value.isEmpty
+                                      ? Theme.of(context).colorScheme.primary
+                                      : Theme.of(context)
+                                          .colorScheme
+                                          .secondary,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                          ),
+                        ],
+                      ),
                     ),
-                  ],
-                ),
-              ),
-
-              // === عرض المنتجات أو رسالة عدم وجود نتائج ===
-              Expanded(
-                child: filteredProducts.isEmpty && searchQuery.value.isNotEmpty
-                    ? Center(
+                  ),
+                  if (filteredProducts.isEmpty &&
+                      searchQuery.value.isNotEmpty)
+                    SliverFillRemaining(
+                      child: Center(
                         child: Column(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
@@ -779,10 +893,13 @@ class HomeScreen extends HookConsumerWidget {
                             ),
                           ],
                         ),
-                      )
-                    : GridView.builder(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 12.0, vertical: 1.0),
+                      ),
+                    )
+                  else
+                    SliverPadding(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 12.0, vertical: 1.0),
+                      sliver: SliverGrid(
                         gridDelegate:
                             const SliverGridDelegateWithFixedCrossAxisCount(
                           crossAxisCount: 2,
@@ -790,41 +907,66 @@ class HomeScreen extends HookConsumerWidget {
                           mainAxisSpacing: 8.0,
                           childAspectRatio: 0.75,
                         ),
-                        itemCount: filteredProducts.length,
-                        itemBuilder: (context, index) {
-                          final product = filteredProducts[index];
-
-                          return _buildProductCard(
-                              context, product, searchQuery.value);
-                        },
+                        delegate: SliverChildBuilderDelegate(
+                          (context, index) {
+                            final product = filteredProducts[index];
+                            return _buildProductCard(
+                                context, product, searchQuery.value);
+                          },
+                          childCount: filteredProducts.length,
+                        ),
                       ),
+                    ),
+                ],
+              ],
+            );
+          },
+          loading: () => CustomScrollView(
+            slivers: [
+              sliverAppBar,
+              SliverFillRemaining(
+                child: ListView.builder(
+                  itemCount: 6,
+                  padding: const EdgeInsets.all(16.0),
+                  itemBuilder: (context, index) {
+                    return Padding(
+                      padding: const EdgeInsets.only(bottom: 16.0),
+                      child: ProductCardShimmer(),
+                    );
+                  },
+                ),
               ),
             ],
-          );
-        },
-        loading: () =>
-            const Center(child: CircularProgressIndicator.adaptive()),
-        error: (error, stack) => Center(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(
-                Icons.error_outline,
-                size: 60,
-                color: Theme.of(context).colorScheme.error,
-              ),
-              const SizedBox(height: 16),
-              Text('حدث خطأ: $error',
-                  style: Theme.of(context).textTheme.titleMedium),
-              const SizedBox(height: 16),
-              OutlinedButton.icon(
-                onPressed: () {
-                  // إعادة تحميل البيانات
-                  ref.invalidate(allDistributorProductsProvider);
-                },
-                icon: const Icon(Icons.refresh, size: 18),
-                label: const Text('إعادة المحاولة'),
+          ),
+          error: (error, stack) => CustomScrollView(
+            slivers: [
+              sliverAppBar,
+              SliverFillRemaining(
+                child: Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        Icons.error_outline,
+                        size: 60,
+                        color: Theme.of(context).colorScheme.error,
+                      ),
+                      const SizedBox(height: 16),
+                      Text('حدث خطأ: $error', 
+                          style: Theme.of(context).textTheme.titleMedium),
+                      const SizedBox(height: 16),
+                      OutlinedButton.icon(
+                        onPressed: () {
+                          // إعادة تحميل البيانات
+                          ref.invalidate(allDistributorProductsProvider);
+                        },
+                        icon: const Icon(Icons.refresh, size: 18),
+                        label: const Text('إعادة المحاولة'),
+                      ),
+                    ],
+                  ),
+                ),
               ),
             ],
           ),
@@ -869,10 +1011,8 @@ class HomeScreen extends HookConsumerWidget {
                     child: CachedNetworkImage(
                       imageUrl: product.imageUrl,
                       fit: BoxFit.contain,
-                      placeholder: (context, url) => Container(
-                        padding: const EdgeInsets.all(12),
-                        child: const CircularProgressIndicator.adaptive(),
-                      ),
+                      placeholder: (context, url) => const Center(
+                            child: ImageLoadingIndicator(size: 50)),
                       errorWidget: (context, url, error) => Container(
                         padding: const EdgeInsets.all(12),
                         child: Icon(

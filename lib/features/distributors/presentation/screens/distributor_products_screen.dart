@@ -16,6 +16,7 @@ import "package:hooks_riverpod/hooks_riverpod.dart";
 import "package:path/path.dart" as p;
 
 import "package:url_launcher/url_launcher.dart";
+import "package:fieldawy_store/widgets/shimmer_loader.dart";
 
 import '../../../products/domain/product_model.dart';
 
@@ -409,11 +410,10 @@ class DistributorProductsScreen extends HookConsumerWidget {
                       child: CachedNetworkImage(
                         imageUrl: product.imageUrl,
                         fit: BoxFit.contain,
-                        placeholder: (context, url) => Center(
-                          child: CircularProgressIndicator(
-                            color: theme.colorScheme.primary,
-                          ),
-                        ),
+                        placeholder: (context, url) => const Center(
+                              child: ImageLoadingIndicator(
+                            size: 50,
+                          )),
                         errorWidget: (context, url, error) => Icon(
                           Icons.broken_image_outlined,
                           size: 60,
@@ -857,8 +857,16 @@ class DistributorProductsScreen extends HookConsumerWidget {
             ],
           );
         },
-        loading: () =>
-            const Center(child: CircularProgressIndicator.adaptive()),
+        loading: () => ListView.builder(
+              itemCount: 6,
+              padding: const EdgeInsets.all(16.0),
+              itemBuilder: (context, index) {
+                return Padding(
+                  padding: const EdgeInsets.only(bottom: 16.0),
+                  child: ProductCardShimmer(),
+                );
+              },
+            ),
         error: (error, stack) => Center(
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
@@ -921,10 +929,8 @@ class DistributorProductsScreen extends HookConsumerWidget {
                     child: CachedNetworkImage(
                       imageUrl: product.imageUrl,
                       fit: BoxFit.contain,
-                      placeholder: (context, url) => Container(
-                        padding: const EdgeInsets.all(12),
-                        child: const CircularProgressIndicator.adaptive(),
-                      ),
+                      placeholder: (context, url) => const Center(
+                            child: ImageLoadingIndicator(size: 50)),
                       errorWidget: (context, url, error) => Container(
                         padding: const EdgeInsets.all(12),
                         child: Icon(

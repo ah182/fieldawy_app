@@ -1,6 +1,7 @@
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../../../widgets/shimmer_loader.dart';
 import '../../services/auth_service.dart';
 
 class LoginScreen extends ConsumerStatefulWidget {
@@ -115,13 +116,12 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
         decoration: BoxDecoration(
           gradient: LinearGradient(
             colors: [
-              colorScheme.primary,
-              colorScheme.primary.withOpacity(0.8),
-              colorScheme.secondary.withOpacity(0.6),
+              const Color.fromARGB(255, 77, 190, 196),
+              const Color.fromARGB(255, 8, 119, 136),
             ],
-            stops: const [0.0, 0.7, 1.0],
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
+            stops: const [0.0, 1.0],
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
           ),
         ),
         child: SafeArea(
@@ -190,22 +190,26 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
                       padding: const EdgeInsets.symmetric(
                           horizontal: 16, vertical: 8),
                       decoration: BoxDecoration(
-                        color: Colors.white.withOpacity(0.1),
+                        color: colorScheme.primary.withOpacity(0.20),
                         borderRadius: BorderRadius.circular(16),
+                        border: Border.all(
+                          color: colorScheme.primary.withOpacity(0.5),
+                          width: 1,
+                        ),
                       ),
                       child: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
                           Icon(
-                            Icons.security,
+                            Icons.people_outline,
                             size: 16,
-                            color: Colors.white.withOpacity(0.8),
+                            color: colorScheme.surfaceDim,
                           ),
                           const SizedBox(width: 8),
                           Text(
-                            'تسجيل دخول آمن',
+                            'secureLogin'.tr(),
                             style: textTheme.bodySmall?.copyWith(
-                              color: Colors.white.withOpacity(0.8),
+                              color: colorScheme.surface,
                               fontWeight: FontWeight.w500,
                             ),
                           ),
@@ -226,30 +230,39 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
   }
 
   Widget _buildLoadingWidget() {
+    final colorScheme = Theme.of(context).colorScheme;
+
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.9),
+        color: Colors.white.withOpacity(0.95),
         borderRadius: BorderRadius.circular(20),
+        border: Border.all(
+          color: Colors.white.withOpacity(0.4),
+          width: 1,
+        ),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.15),
+            color: Colors.black.withOpacity(0.2),
             spreadRadius: 2,
-            blurRadius: 15,
-            offset: const Offset(0, 8),
+            blurRadius: 20,
+            offset: const Offset(0, 10),
+          ),
+          BoxShadow(
+            color: colorScheme.primary.withOpacity(0.2),
+            spreadRadius: 1,
+            blurRadius: 12,
+            offset: const Offset(0, 4),
           ),
         ],
       ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          SizedBox(
+          const ShimmerLoader(
             width: 24,
             height: 24,
-            child: CircularProgressIndicator(
-              color: Theme.of(context).colorScheme.primary,
-              strokeWidth: 3,
-            ),
+            isCircular: true,
           ),
           const SizedBox(height: 12),
           Text(
@@ -257,7 +270,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
             style: TextStyle(
               fontSize: 16,
               fontWeight: FontWeight.w500,
-              color: Theme.of(context).colorScheme.primary,
+              color: colorScheme.primary,
             ),
           ),
         ],
@@ -266,81 +279,46 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
   }
 
   Widget _buildGoogleSignInButton(bool isSmallScreen) {
+    // ignore: unused_local_variable
     final colorScheme = Theme.of(context).colorScheme;
 
     return Container(
       width: double.infinity,
-      // === إضافة حد أقصى لعرض الزر على الشاشات الكبيرة ===
       constraints: BoxConstraints(
         maxWidth: isSmallScreen ? double.infinity : 400,
       ),
-      height: 60,
-      margin: const EdgeInsets.symmetric(horizontal: 15),
-      child: Material(
-        color: Colors.transparent,
-        child: InkWell(
-          onTap: _signInWithGoogle,
-          borderRadius: BorderRadius.circular(16),
-          splashColor: colorScheme.primary.withOpacity(0.1),
-          highlightColor: colorScheme.primary.withOpacity(0.05),
-          child: Ink(
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(16),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withOpacity(0.1),
-                  spreadRadius: 1,
-                  blurRadius: 15,
-                  offset: const Offset(0, 8),
-                ),
-                BoxShadow(
-                  color: colorScheme.primary.withOpacity(0.1),
-                  spreadRadius: 1,
-                  blurRadius: 8,
-                  offset: const Offset(0, 2),
-                ),
-              ],
-            ),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                // === لوجو Google في مستطيل صغير ===
-                Container(
-                  width: 45,
-                  height: 45,
-                  padding: const EdgeInsets.all(8),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(10),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withOpacity(0.08),
-                        blurRadius: 6,
-                        offset: const Offset(0, 2),
-                      ),
-                    ],
-                  ),
-                  child: const Image(
-                    image: AssetImage('assets/google_icon.png'),
-                    width: 29,
-                    height: 29,
-                    fit: BoxFit.contain,
-                  ),
-                ),
-                const SizedBox(width: 16),
-                Text(
-                  'signInWithGoogle'.tr(),
-                  style: const TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.w500,
-                    color: Colors.black,
-                    letterSpacing: 0.5,
-                  ),
-                ),
-              ],
+      height: 50,
+      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      child: ElevatedButton.icon(
+        onPressed: _signInWithGoogle,
+        icon: Image.asset(
+          'assets/google_icon.png',
+          width: 24,
+          height: 24,
+          fit: BoxFit.contain,
+        ),
+        label: Text(
+          'signInWithGoogle'.tr(),
+          style: TextStyle(
+            fontSize: 16,
+            fontWeight: FontWeight.w500,
+            color: Colors.black87,
+          ),
+        ),
+        style: ElevatedButton.styleFrom(
+          backgroundColor: Colors.white,
+          foregroundColor: Colors.black87,
+          elevation: 2,
+          shadowColor: Colors.black26,
+          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(8),
+            side: BorderSide(
+              color: Colors.grey.shade300,
+              width: 1,
             ),
           ),
+          iconColor: null, // للحفاظ على ألوان Google الأصلية
         ),
       ),
     );

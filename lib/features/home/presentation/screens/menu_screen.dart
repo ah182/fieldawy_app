@@ -1,5 +1,7 @@
+// ignore: unused_import
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:easy_localization/easy_localization.dart';
+import 'package:fieldawy_store/core/theme/app_theme.dart';
 import 'package:fieldawy_store/features/authentication/domain/user_model.dart';
 import 'package:fieldawy_store/features/authentication/services/auth_service.dart';
 import 'package:fieldawy_store/features/home/application/user_data_provider.dart';
@@ -10,6 +12,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:fieldawy_store/features/products/presentation/screens/my_products_screen.dart';
 import 'package:flutter_zoom_drawer/flutter_zoom_drawer.dart';
 import 'package:fieldawy_store/features/distributors/presentation/screens/distributors_screen.dart';
+import 'package:fieldawy_store/widgets/shimmer_loader.dart';
 
 class MenuScreen extends ConsumerWidget {
   const MenuScreen({super.key});
@@ -25,11 +28,16 @@ class MenuScreen extends ConsumerWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Padding(
-              padding: const EdgeInsets.all(24.0),
+              padding: const EdgeInsets.fromLTRB(24.0, 36.0, 24.0, 16.0),
               child: userDataAsync.when(
-                data: (user) => _buildMenuHeader(context, user),
+                data: (user) => _buildMenuHeader(context, ref, user),
                 loading: () => const Center(
-                    child: CircularProgressIndicator(color: Colors.white)),
+                    child: ShimmerLoader(
+                  width: 40,
+                  height: 40,
+                  isCircular: true,
+                  baseColor: Colors.white,
+                )),
                 error: (e, s) =>
                     const Text('Error', style: TextStyle(color: Colors.white)),
               ),
@@ -69,7 +77,7 @@ class MenuScreen extends ConsumerWidget {
   /// The menu for the distributor
   Widget _buildDistributorMenu(BuildContext context) {
     return ListView(
-      padding: EdgeInsets.zero,
+      padding: const EdgeInsets.symmetric(vertical: 8.0),
       children: [
         _buildMenuItem(
             icon: Icons.home_outlined,
@@ -115,7 +123,7 @@ class MenuScreen extends ConsumerWidget {
   /// The menu for the doctor
   Widget _buildDoctorMenu(BuildContext context) {
     return ListView(
-      padding: EdgeInsets.zero,
+      padding: const EdgeInsets.symmetric(vertical: 8.0),
       children: [
         _buildMenuItem(
             icon: Icons.home_outlined,
@@ -159,7 +167,7 @@ class MenuScreen extends ConsumerWidget {
   /// The menu for the standard viewer
   Widget _buildViewerMenu(BuildContext context) {
     return ListView(
-      padding: EdgeInsets.zero,
+      padding: const EdgeInsets.symmetric(vertical: 8.0),
       children: [
         _buildMenuItem(
             icon: Icons.home_outlined,
@@ -171,27 +179,96 @@ class MenuScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildMenuHeader(BuildContext context, UserModel? user) {
+  Widget _buildMenuHeader(
+      BuildContext context, WidgetRef ref, UserModel? user) {
     if (user == null) return const SizedBox.shrink();
+    
+    final currentThemeMode = ref.watch(themeNotifierProvider);
+
+    // دالة تغيير الثيم
+    void changeTheme(ThemeMode mode) {
+      ref.read(themeNotifierProvider.notifier).setThemeMode(mode);
+    }
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        CircleAvatar(
-          radius: 35,
-          backgroundColor: Colors.white24,
-          child: user.photoURL != null && user.photoURL!.isNotEmpty
-              ? ClipOval(child: CachedNetworkImage(imageUrl: user.photoURL!))
-              : const Icon(Icons.person, size: 35, color: Colors.white),
-        ),
-        const SizedBox(height: 12),
-        Text(
-          'helloUser'.tr(namedArgs: {'name': user.displayName ?? ''}),
-          style: const TextStyle(
-            color: Colors.white,
-            fontSize: 22,
-            fontWeight: FontWeight.bold,
+        const SizedBox(height: 20),
+
+        // --- Theme Switch في Header ---
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 0.0),
+          child: Align(
+            alignment: Alignment.centerLeft,
+            child: GestureDetector(
+              onTap: () {
+                if (currentThemeMode == ThemeMode.light) {
+                  changeTheme(ThemeMode.dark);
+                } else {
+                  changeTheme(ThemeMode.light);
+                }
+              },
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 200), // تقليل المدة لتحسين الاستجابة
+                curve: Curves.easeOutCubic, // منحنى أنعم وأكثر سلاسة
+                width: 60,
+                height: 32,
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(16),
+                  color: currentThemeMode == ThemeMode.dark
+                      ? const Color.fromARGB(255, 125, 125, 125).withOpacity(0.2)
+                      : const Color.fromARGB(255, 125, 125, 125).withOpacity(0.2),
+                ),
+                child: Stack(
+                  alignment: Alignment.center,
+                  children: [
+                    AnimatedPositioned(
+                      duration: const Duration(milliseconds: 200), // تقليل المدة لتحسين الاستجابة
+                      curve: Curves.easeOutCubic, // منحنى أنعم وأكثر سلاسة
+                      left: currentThemeMode == ThemeMode.light ? 2.0 : 30.0,
+                      child: Container(
+                        width: 28,
+                        height: 28,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          color: Colors.white,
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withOpacity(0.2),
+                              blurRadius: 4,
+                              offset: const Offset(0, 2),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceAround,
+                      children: [
+                        Icon(
+                          Icons.light_mode,
+                          size: 16,
+                          color: currentThemeMode == ThemeMode.light
+                              ? Theme.of(context).colorScheme.primary
+                              : const Color.fromARGB(255, 251, 171, 106),
+                        ),
+                        Icon(
+                          Icons.dark_mode,
+                          size: 16,
+                          color: currentThemeMode == ThemeMode.dark
+                              ? Theme.of(context).colorScheme.primary
+                              : const Color.fromARGB(255, 250, 251, 251),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ),
           ),
         ),
+        
+        const SizedBox(height: 24),
       ],
     );
   }
@@ -202,7 +279,7 @@ class MenuScreen extends ConsumerWidget {
     required VoidCallback onTap,
   }) {
     return ListTile(
-      leading: Icon(icon, color: Colors.white70),
+      leading: Icon(icon, color: Colors.white70, size: 20),
       title: Text(
         title,
         style: const TextStyle(
@@ -213,6 +290,9 @@ class MenuScreen extends ConsumerWidget {
       ),
       onTap: onTap,
       splashColor: Colors.white24,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+      ),
     );
   }
 }

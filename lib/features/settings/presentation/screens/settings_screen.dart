@@ -18,7 +18,10 @@ class SettingsScreen extends ConsumerWidget {
 
     // دالة مساعدة لتغيير الثيم لتجنب تكرار الكود
     void changeTheme(ThemeMode mode) {
-      ref.read(themeNotifierProvider.notifier).setThemeMode(mode);
+      // تجنب إعادة تعيين نفس الثيم
+      if (currentThemeMode != mode) {
+        ref.read(themeNotifierProvider.notifier).setThemeMode(mode);
+      }
     }
 
     return MainScaffold(
@@ -113,42 +116,57 @@ class SettingsScreen extends ConsumerWidget {
                   child: Column(
                     children: [
                       // --- تم استبدال SwitchListTile بـ ListTile و Switch مصغر ---
-                      ListTile(
-                        leading: const Icon(Icons.light_mode_outlined),
-                        title: Text('LightMode'.tr()),
-                        trailing: Transform.scale(
-                          scale:
-                              0.8, // يمكنك تغيير هذا الرقم (مثلاً 0.7 أو 0.9)
-                          child: Switch(
-                            value: currentThemeMode == ThemeMode.light,
-                            onChanged: (value) => changeTheme(ThemeMode.light),
-                          ),
-                        ),
-                        onTap: () => changeTheme(ThemeMode.light),
+                      Consumer(
+                        builder: (context, ref, child) {
+                          final currentThemeMode = ref.watch(themeNotifierProvider);
+                          return ListTile(
+                            leading: const Icon(Icons.light_mode_outlined),
+                            title: Text('LightMode'.tr()),
+                            trailing: Transform.scale(
+                              scale:
+                                  0.8, // يمكنك تغيير هذا الرقم (مثلاً 0.7 أو 0.9)
+                              child: Switch(
+                                value: currentThemeMode == ThemeMode.light,
+                                onChanged: (value) => changeTheme(ThemeMode.light),
+                              ),
+                            ),
+                            onTap: () => changeTheme(ThemeMode.light),
+                          );
+                        },
                       ),
-                      ListTile(
-                        leading: const Icon(Icons.dark_mode_outlined),
-                        title: Text('DarkMode'.tr()),
-                        trailing: Transform.scale(
-                          scale: 0.8,
-                          child: Switch(
-                            value: currentThemeMode == ThemeMode.dark,
-                            onChanged: (value) => changeTheme(ThemeMode.dark),
-                          ),
-                        ),
-                        onTap: () => changeTheme(ThemeMode.dark),
+                      Consumer(
+                        builder: (context, ref, child) {
+                          final currentThemeMode = ref.watch(themeNotifierProvider);
+                          return ListTile(
+                            leading: const Icon(Icons.dark_mode_outlined),
+                            title: Text('DarkMode'.tr()),
+                            trailing: Transform.scale(
+                              scale: 0.8,
+                              child: Switch(
+                                value: currentThemeMode == ThemeMode.dark,
+                                onChanged: (value) => changeTheme(ThemeMode.dark),
+                              ),
+                            ),
+                            onTap: () => changeTheme(ThemeMode.dark),
+                          );
+                        },
                       ),
-                      ListTile(
-                        leading: const Icon(Icons.phonelink_setup_outlined),
-                        title: Text('SystemDefault'.tr()),
-                        trailing: Transform.scale(
-                          scale: 0.8,
-                          child: Switch(
-                            value: currentThemeMode == ThemeMode.system,
-                            onChanged: (value) => changeTheme(ThemeMode.system),
-                          ),
-                        ),
-                        onTap: () => changeTheme(ThemeMode.system),
+                      Consumer(
+                        builder: (context, ref, child) {
+                          final currentThemeMode = ref.watch(themeNotifierProvider);
+                          return ListTile(
+                            leading: const Icon(Icons.phonelink_setup_outlined),
+                            title: Text('SystemDefault'.tr()),
+                            trailing: Transform.scale(
+                              scale: 0.8,
+                              child: Switch(
+                                value: currentThemeMode == ThemeMode.system,
+                                onChanged: (value) => changeTheme(ThemeMode.system),
+                              ),
+                            ),
+                            onTap: () => changeTheme(ThemeMode.system),
+                          );
+                        },
                       ),
                     ],
                   ),

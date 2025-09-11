@@ -13,6 +13,7 @@ import 'package:path_provider/path_provider.dart';
 import 'package:path/path.dart' as p;
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:fieldawy_store/widgets/shimmer_loader.dart';
 
 class AddProductOcrScreen extends ConsumerStatefulWidget {
   const AddProductOcrScreen({super.key});
@@ -307,13 +308,11 @@ class _AddProductOcrScreenState extends ConsumerState<AddProductOcrScreen> {
           minimumSize: const Size(double.infinity, 54),
         ),
         child: (_isOCRProcessing || _isUploadProcessing)
-            ? SizedBox(
-                height: 24,
+            ? const ShimmerLoader(
                 width: 24,
-                child: CircularProgressIndicator(
-                  strokeWidth: 2,
-                  color: Colors.white,
-                ),
+                height: 24,
+                isCircular: true,
+                baseColor: Colors.white,
               )
             : Text(
                 'Save Product',
@@ -398,25 +397,21 @@ class _AddProductOcrScreenState extends ConsumerState<AddProductOcrScreen> {
                           if (_isOCRProcessing)
                             Padding(
                               padding: const EdgeInsets.only(left: 8.0),
-                              child: SizedBox(
-                                height: 20,
+                              child: ShimmerLoader(
                                 width: 20,
-                                child: CircularProgressIndicator(
-                                  strokeWidth: 2,
-                                  color: accentColor,
-                                ),
+                                height: 20,
+                                isCircular: true,
+                                baseColor: accentColor,
                               ),
                             ),
                           if (_isUploadProcessing)
                             Padding(
                               padding: const EdgeInsets.only(left: 8.0),
-                              child: SizedBox(
-                                height: 20,
+                              child: const ShimmerLoader(
                                 width: 20,
-                                child: CircularProgressIndicator(
-                                  strokeWidth: 2,
-                                  color: Colors.orangeAccent,
-                                ),
+                                height: 20,
+                                isCircular: true,
+                                baseColor: Colors.orangeAccent,
                               ),
                             ),
                         ],

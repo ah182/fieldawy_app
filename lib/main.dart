@@ -10,7 +10,7 @@ import 'firebase_options.dart';
 import 'core/theme/app_theme.dart';
 import 'core/localization/language_provider.dart';
 import 'features/authentication/data/storage_service.dart';
-
+import 'services/app_state_manager.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -27,7 +27,9 @@ Future<void> main() async {
         supportedLocales: const [Locale('ar'), Locale('en')],
         path: 'assets/translations',
         fallbackLocale: const Locale('ar'),
-        child: const FieldawyStoreApp(),
+        child: AppStateManager(
+          child: const FieldawyStoreApp(),
+        ),
       ),
     ),
   );
@@ -38,6 +40,11 @@ class FieldawyStoreApp extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    // استدعاء restoreLastRoute عند بداية التطبيق
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      ref.read(currentRouteProvider.notifier).restoreLastRoute();
+    });
+
     final locale = ref.watch(languageProvider);
     // 1. مراقبة الثيم الحالي
     final themeMode = ref.watch(themeNotifierProvider);
@@ -52,8 +59,11 @@ class FieldawyStoreApp extends ConsumerWidget {
 
       theme: AppTheme.lightTheme,
       darkTheme: AppTheme.darkTheme,
-      // 2. تطبيق الثيم المختار
+      // 2. تطبيق الثيم المختار مع تحسين الأداء
       themeMode: themeMode,
+      // إعدادات إضافية لتحسين أداء تبديل الثيمات
+      themeAnimationDuration: const Duration(milliseconds: 200), // تقليل مدة انتقال الثيم
+      themeAnimationCurve: Curves.easeOutCubic, // استخدام منحنى انتقال سلس
 
       home: const AuthGate(),
     );

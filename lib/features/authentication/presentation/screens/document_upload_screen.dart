@@ -4,6 +4,7 @@ import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
+import '../../../../../widgets/shimmer_loader.dart';
 import '../../application/document_upload_controller.dart';
 import 'profile_completion_screen.dart';
 
@@ -120,7 +121,12 @@ class _DocumentUploadScreenState extends ConsumerState<DocumentUploadScreen> {
             ),
             const Spacer(),
             if (_isUploading)
-              const Center(child: CircularProgressIndicator())
+              const Center(
+                  child: ShimmerLoader(
+                width: 40,
+                height: 40,
+                isCircular: true,
+              ))
             else
               ElevatedButton(
                 onPressed: _onNextPressed,
