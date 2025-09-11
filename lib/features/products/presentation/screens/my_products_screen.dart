@@ -15,6 +15,7 @@ import 'package:fieldawy_store/features/authentication/services/auth_service.dar
 
 import 'package:fieldawy_store/widgets/main_scaffold.dart';
 import 'package:fieldawy_store/widgets/custom_product_dialog.dart';
+import 'package:fieldawy_store/widgets/shimmer_loader.dart';
 
 class MyProductsScreen extends HookConsumerWidget {
   // <= غيرنا لـ HookConsumerWidget
@@ -636,8 +637,16 @@ class MyProductsScreen extends HookConsumerWidget {
               },
             );
           },
-          loading: () =>
-              const Center(child: CircularProgressIndicator.adaptive()),
+          loading: () => ListView.builder(
+            itemCount: 6,
+            padding: const EdgeInsets.all(16.0),
+            itemBuilder: (context, index) {
+              return Padding(
+                padding: const EdgeInsets.only(bottom: 16.0),
+                child: ProductCardShimmer(),
+              );
+            },
+          ),
           error: (error, stack) => LayoutBuilder(
             builder: (context, constraints) {
               return SingleChildScrollView(
