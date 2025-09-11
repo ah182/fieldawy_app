@@ -13,10 +13,28 @@ class CategoryScreen extends ConsumerWidget {
     final userRole = ref.watch(userDataProvider).asData?.value?.role ?? '';
     final selectedIndex = userRole == 'distributor' ? 1 : 1;
 
+    final sliverAppBar = SliverAppBar(
+      title: Text('categoryScreen'.tr()),
+      pinned: true,
+      floating: true,
+    );
+
     return MainScaffold(
       selectedIndex: selectedIndex,
-      appBar: AppBar(title: const Text('Category')),
-      body: Center(child: Text('categoryScreen'.tr())),
+      body: RefreshIndicator(
+        onRefresh: () async {
+          // TODO: Implement refresh logic
+          await Future.delayed(const Duration(seconds: 1));
+        },
+        child: CustomScrollView(
+          slivers: [
+            sliverAppBar,
+            SliverFillRemaining(
+              child: Center(child: Text('categoryScreen'.tr())),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }

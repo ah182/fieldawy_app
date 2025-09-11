@@ -6,6 +6,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:fieldawy_store/widgets/shimmer_loader.dart';
+import 'package:fieldawy_store/widgets/custom_product_dialog.dart';
 import 'dart:ui' as ui;
 
 class AddFromCatalogScreen extends ConsumerStatefulWidget {
@@ -15,60 +17,49 @@ class AddFromCatalogScreen extends ConsumerStatefulWidget {
   ConsumerState<AddFromCatalogScreen> createState() =>
       _AddFromCatalogScreenState();
 
-  /// دالة علشان تفتح Dialog فيه الصورة بحجمها الطبيعي
+  /// دالة علشان تفتح Dialog فيه تفاصيل المنتج كاملة
   /// معرفة كـ static علشان نقدر نستخدمها من الـ Item
-  static void _showImagePreviewDialog(BuildContext context, String imageUrl) {
-    showDialog(
+  static void _showProductDetailDialog(BuildContext context, ProductModel product, [String? package]) {
+    // إنشاء نسخة مؤقتة من المنتج مع العبوة المحددة
+    final productWithPackage = ProductModel(
+      id: product.id,
+      name: product.name,
+      description: product.description,
+      activePrinciple: product.activePrinciple,
+      company: product.company,
+      action: product.action,
+      package: package ?? product.selectedPackage,
+      availablePackages: product.availablePackages,
+      imageUrl: product.imageUrl,
+      price: product.price,
+      distributorId: product.distributorId,
+      createdAt: product.createdAt,
+      selectedPackage: package ?? product.selectedPackage,
+    );
+
+    showGeneralDialog(
       context: context,
-      builder: (BuildContext context) {
-        return Dialog(
-          backgroundColor: Colors.transparent,
-          insetPadding: const EdgeInsets.all(20),
-          child: Stack(
-            children: [
-              InteractiveViewer(
-                panEnabled: true,
-                boundaryMargin: const EdgeInsets.all(20),
-                minScale: 0.5,
-                maxScale: 4,
-                child: ClipRRect(
-                  borderRadius: BorderRadius.circular(12),
-                  child: CachedNetworkImage(
-                    imageUrl: imageUrl,
-                    fit: BoxFit.contain,
-                    placeholder: (context, url) => const Center(
-                      child: CircularProgressIndicator(),
-                    ),
-                    errorWidget: (context, url, error) => const Icon(
-                      Icons.broken_image_outlined,
-                      size: 50,
-                      color: Colors.white,
-                    ),
-                  ),
-                ),
-              ),
-              Positioned(
-                top: 10,
-                right: 10,
-                child: GestureDetector(
-                  onTap: () {
-                    Navigator.of(context).pop();
-                  },
-                  child: Container(
-                    padding: const EdgeInsets.all(8),
-                    decoration: const BoxDecoration(
-                      color: Colors.black54,
-                      shape: BoxShape.circle,
-                    ),
-                    child: const Icon(
-                      Icons.close,
-                      color: Colors.white,
-                      size: 24,
-                    ),
-                  ),
-                ),
-              ),
-            ],
+      barrierDismissible: true,
+      barrierLabel: MaterialLocalizations.of(context).modalBarrierDismissLabel,
+      barrierColor: Colors.black54,
+      transitionDuration: const Duration(milliseconds: 400),
+      pageBuilder: (context, animation1, animation2) {
+        return Center(
+          child: Material(
+            type: MaterialType.transparency,
+            child: CustomProductDialog(product: productWithPackage),
+          ),
+        );
+      },
+      transitionBuilder: (context, animation1, animation2, child) {
+        return ScaleTransition(
+          scale: CurvedAnimation(
+            parent: animation1,
+            curve: Curves.elasticOut,
+          ),
+          child: FadeTransition(
+            opacity: animation1,
+            child: child,
           ),
         );
       },
@@ -469,8 +460,16 @@ class _AddFromCatalogScreenState extends ConsumerState<AddFromCatalogScreen> {
               },
             );
           },
-          loading: () =>
-              const Center(child: CircularProgressIndicator.adaptive()),
+          loading: () => ListView.builder(
+                itemCount: 6,
+                padding: const EdgeInsets.all(16.0),
+                itemBuilder: (context, index) {
+                  return Padding(
+                    padding: const EdgeInsets.only(bottom: 16.0),
+                    child: ProductCardShimmer(),
+                  );
+                },
+              ),
           error: (error, stack) => Center(
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
@@ -547,8 +546,8 @@ class _ProductCatalogItem extends HookConsumerWidget {
             GestureDetector(
               onTap: () {
                 // استدعاء الدالة كـ static من الـ StatefulWidget
-                AddFromCatalogScreen._showImagePreviewDialog(
-                    context, product.imageUrl);
+                AddFromCatalogScreen._showProductDetailDialog(
+                    context, product, package);
               },
               child: ClipRRect(
                 borderRadius: BorderRadius.circular(8),
@@ -560,7 +559,7 @@ class _ProductCatalogItem extends HookConsumerWidget {
                     imageUrl: product.imageUrl,
                     fit: BoxFit.contain, // علشان الصورة تبان كلها
                     placeholder: (context, url) =>
-                        const Icon(Icons.medication, size: 30),
+                        const Center(child: ImageLoadingIndicator(size: 30)),
                     errorWidget: (context, url, error) =>
                         const Icon(Icons.error_outline, size: 30),
                   ),

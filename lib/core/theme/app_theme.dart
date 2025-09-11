@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'dart:async'; // إضافة استيراد لدعم unawaited
 
 // --- Provider جديد للتحكم في حالة الثيم ---
 final themeNotifierProvider =
@@ -10,24 +11,45 @@ final themeNotifierProvider =
 
 class ThemeNotifier extends StateNotifier<ThemeMode> {
   ThemeNotifier() : super(ThemeMode.system) {
+    // تحميل الثيم بشكل غير متزامن دون إيقاف واجهة المستخدم
     _loadTheme();
   }
 
-  // دالة لتحميل الثيم المحفوظ
+  // دالة لتحميل الثيم المحفوظ - محسنة
   void _loadTheme() async {
-    final prefs = await SharedPreferences.getInstance();
-    final themeIndex =
-        prefs.getInt('themeMode') ?? 2; // 0=light, 1=dark, 2=system
-    state = ThemeMode.values[themeIndex];
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final themeIndex = prefs.getInt('themeMode') ?? 2; // 0=light, 1=dark, 2=system
+      // تحديث الحالة فقط إذا كانت مختلفة عن الحالة الافتراضية
+      if (state != ThemeMode.values[themeIndex]) {
+        state = ThemeMode.values[themeIndex];
+      }
+    } catch (e) {
+      // في حالة حدوث خطأ، نستخدم الثيم الافتراضي
+      state = ThemeMode.system;
+    }
   }
 
-  // دالة لتغيير الثيم وحفظ الاختيار
+  // دالة لتغيير الثيم وحفظ الاختيار - محسنة
   Future<void> setThemeMode(ThemeMode mode) async {
     if (state == mode) return;
 
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setInt('themeMode', mode.index);
+    // تحديث الحالة فوراً لتحسين الاستجابة
     state = mode;
+
+    // حفظ الاختيار في الخلفية دون إعاقة واجهة المستخدم
+    unawaited(_saveThemePreference(mode));
+  }
+
+  // دالة مساعدة لحفظ تفضيلات الثيم في الخلفية
+  Future<void> _saveThemePreference(ThemeMode mode) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setInt('themeMode', mode.index);
+    } catch (e) {
+      // يمكن إضافة تسجيل للأخطاء هنا إذا لزم الأمر
+      debugPrint('Error saving theme preference: $e');
+    }
   }
 }
 
@@ -57,42 +79,40 @@ class AppTheme {
       primary: kTeal, // اللون الأساسي (الأزرق الفاتح الهادي)
       onPrimary: Colors.white, // لون النص على الأولي (أبيض علشان يبان عليه)
       primaryContainer:
-          kTeal.withOpacity(0.1), // حاوية أولية أفتح (علشان البطاقات المميزة)
+          kTeal.withAlpha(26), // حاوية أولية أفتح (علشان البطاقات المميزة)
       onPrimaryContainer: kNavy, // لون النص على حاوية الأولي ( Navy داكن)
 
       // --- الألوان الثانوية (Secondary) - باستخدام kBlue ---
       secondary: kBlue, // اللون الثانوي (الأزرق الأساسي)
       onSecondary: Colors.white, // لون النص على الثانوي
-      secondaryContainer: kBlue.withOpacity(0.1), // حاوية ثانوية أفتح
+      secondaryContainer: kBlue.withAlpha(26), // حاوية ثانوية أفتح
       onSecondaryContainer: kNavy, // لون النص على حاوية الثانوي
 
       // --- الألوان الثالثية (Tertiary) - باستخدام kIndigo ---
       tertiary: kIndigo, // اللون الثالثي (البنفسجي)
       onTertiary: Colors.white, // لون النص على الثالثي
-      tertiaryContainer: kIndigo.withOpacity(0.1), // حاوية ثالثية أفتح
+      tertiaryContainer: kIndigo.withAlpha(26), // حاوية ثالثية أفتح
       onTertiaryContainer: kNavy, // لون النص على حاوية الثالثي
 
       // --- ألوان الخلفيات والأسطح ---
-      background: const Color(0xFFf3f4f7), // خلفية رئيسية (فاتحة)
-      onBackground: kNavy, // نص على الخلفية ( Navy داكن علشان يبان عليه)
       surface: Colors.white, // أسطح البطاقات والمكونات (أبيض)
       onSurface: kNavy, // نص على الأسطح ( Navy داكن)
-      surfaceVariant:
+      surfaceContainerHighest:
           const Color(0xFFe2e4eb), // سطح متنوع ( чуть أفتح من surface)
-      onSurfaceVariant: kNavy.withOpacity(0.7), // نص على السطح المتنوع
+      onSurfaceVariant: kNavy.withAlpha(179), // نص على السطح المتنوع
 
       // --- ألوان أخرى ---
       outline: const Color(0xFFd1d3da), // حدود خفيفة (رمادية فاتحة)
       outlineVariant:
           const Color(0xFFe1e3ea), // حدود متنوعة ( чуть أغمق من outline)
-      shadow: Colors.black.withOpacity(0.1), // لون الظل (أسود شفاف)
+      shadow: Colors.black.withAlpha(26), // لون الظل (أسود شفاف)
       scrim: Colors.black, // لون scrim (overlay)
       inverseSurface: kNavy, // سطح معكوس (علشان الوضع الداكن)
       onInverseSurface: Colors.white, // نص على السطح المعكوس
       inversePrimary: kNavy, // أولي معكوس
       error: const Color(0xFFB00020), // لون الخطأ (أحمر فاتح Material)
       onError: Colors.white, // نص على الخطأ
-      errorContainer: const Color(0xFFB00020).withOpacity(0.1), // حاوية خطأ
+      errorContainer: const Color(0xFFB00020).withAlpha(26), // حاوية خطأ
       onErrorContainer: const Color(0xFFB00020), // نص على حاوية الخطأ
     ),
 
@@ -120,11 +140,11 @@ class AppTheme {
     cardTheme: CardThemeData(
       elevation: 1,
       color: Colors.white, // خلفية بيضاء
-      shadowColor: Colors.black.withOpacity(0.05), // ظل أخف
+      shadowColor: Colors.black.withAlpha(13), // ظل أخف
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(16.0),
         side: BorderSide(
-          color: const Color(0xFFd1d3da).withOpacity(0.5), // حد أخف للبطاقة
+          color: const Color(0xFFd1d3da).withAlpha(128), // حد أخف للبطاقة
           width: 0.5,
         ),
       ),
@@ -145,8 +165,8 @@ class AppTheme {
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(12),
         ),
-        disabledBackgroundColor: kTeal.withOpacity(0.5),
-        disabledForegroundColor: Colors.white.withOpacity(0.5),
+        disabledBackgroundColor: kTeal.withAlpha(128),
+        disabledForegroundColor: Colors.white.withAlpha(128),
       ),
     ),
 
@@ -163,10 +183,10 @@ class AppTheme {
           borderRadius: BorderRadius.circular(12),
         ),
         side: BorderSide(
-          color: kTeal.withOpacity(0.7), // لون الحد
+          color: kTeal.withAlpha(179), // لون الحد
           width: 1.5,
         ),
-        disabledForegroundColor: kTeal.withOpacity(0.5),
+        disabledForegroundColor: kTeal.withAlpha(128),
       ),
     ),
 
@@ -178,7 +198,7 @@ class AppTheme {
           fontFamily: 'Cairo',
           fontWeight: FontWeight.w600,
         ),
-        disabledForegroundColor: kTeal.withOpacity(0.5),
+        disabledForegroundColor: kTeal.withAlpha(128),
       ),
     ),
 
@@ -191,13 +211,13 @@ class AppTheme {
       border: OutlineInputBorder(
         borderRadius: BorderRadius.circular(12),
         borderSide: BorderSide(
-          color: const Color(0xFFd1d3da).withOpacity(0.7), // حد عادي
+          color: const Color(0xFFd1d3da).withAlpha(179), // حد عادي
         ),
       ),
       enabledBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(12),
         borderSide: BorderSide(
-          color: const Color(0xFFd1d3da).withOpacity(0.7), // حد مفعل
+          color: const Color(0xFFd1d3da).withAlpha(179), // حد مفعل
         ),
       ),
       focusedBorder: OutlineInputBorder(
@@ -221,11 +241,11 @@ class AppTheme {
           width: 2,
         ),
       ),
-      labelStyle: TextStyle(color: kNavy.withOpacity(0.7)),
+      labelStyle: TextStyle(color: kNavy.withAlpha(179)),
       floatingLabelStyle: TextStyle(color: kTeal, fontWeight: FontWeight.w600),
-      hintStyle: TextStyle(color: kNavy.withOpacity(0.5)),
-      prefixIconColor: kNavy.withOpacity(0.6),
-      suffixIconColor: kNavy.withOpacity(0.6),
+      hintStyle: TextStyle(color: kNavy.withAlpha(128)),
+      prefixIconColor: kNavy.withAlpha(153),
+      suffixIconColor: kNavy.withAlpha(153),
     ),
 
     // === Switch ===
@@ -241,10 +261,10 @@ class AppTheme {
           WidgetStateProperty.resolveWith<Color?>((Set<WidgetState> states) {
         if (states.contains(WidgetState.selected)) {
           return kTeal
-              .withOpacity(0.5); // لون الخلفية لما يكون مفعل (الأكسنت شفاف)
+              .withAlpha(128); // لون الخلفية لما يكون مفعل (الأكسنت شفاف)
         }
         return const Color(0xFFd1d3da)
-            .withOpacity(0.5); // لون الخلفية لما يكون مش مفعل
+            .withAlpha(128); // لون الخلفية لما يكون مش مفعل
       }),
     ),
 
@@ -315,17 +335,17 @@ class AppTheme {
           fontFamily: 'Cairo',
           fontSize: 16,
           height: 1.5,
-          color: kNavy.withOpacity(0.8)),
+          color: kNavy.withAlpha(204)),
       bodyMedium: TextStyle(
           fontFamily: 'Cairo',
           fontSize: 14,
           height: 1.43,
-          color: kNavy.withOpacity(0.8)),
+          color: kNavy.withAlpha(204)),
       bodySmall: TextStyle(
           fontFamily: 'Cairo',
           fontSize: 12,
           height: 1.33,
-          color: kNavy.withOpacity(0.7)),
+          color: kNavy.withAlpha(179)),
       labelLarge: TextStyle(
           fontFamily: 'Cairo',
           fontSize: 14,
@@ -371,18 +391,16 @@ class AppTheme {
       // --- الألوان الثانوية (Secondary) - باستخدام kBlue ---
       secondary: kBlue, // اللون الثانوي (الأزرق الأساسي)
       onSecondary: Colors.white, // لون النص على الثانوي
-      secondaryContainer: kBlue.withOpacity(0.2), // حاوية ثانوية أفتح
+      secondaryContainer: kBlue.withAlpha(51), // حاوية ثانوية أفتح
       onSecondaryContainer: Colors.white, // لون النص على حاوية الثانوي
 
       // --- الألوان الثالثية (Tertiary) - باستخدام kIndigo ---
       tertiary: kIndigo, // اللون الثالثي (البنفسجي)
       onTertiary: Colors.white, // لون النص على الثالثي
-      tertiaryContainer: kIndigo.withOpacity(0.2), // حاوية ثالثية أفتح
+      tertiaryContainer: kIndigo.withAlpha(51), // حاوية ثالثية أفتح
       onTertiaryContainer: Colors.white, // لون النص على حاوية الثالثي
 
       // --- ألوان الخلفيات والأسطح ---
-      background: const Color(0xFF0F1220), // خلفية رئيسية ( Navy داكن جدًا)
-      onBackground: Colors.white, // نص على الخلفية
       surface: const Color(0xFF151A2E), // أسطح البطاقات والمكونات ( Navy داكن)
       onSurface: Colors.white, // نص على الأسطح
       surfaceContainerHighest:
@@ -400,7 +418,7 @@ class AppTheme {
       inversePrimary: kNavy, // أولي معكوس
       error: const Color(0xFFCF6679), // لون الخطأ (أحمر فاتح Material)
       onError: Colors.black, // نص على الخطأ
-      errorContainer: const Color(0xFFB00020).withOpacity(0.2), // حاوية خطأ
+      errorContainer: const Color(0xFFB00020).withAlpha(51), // حاوية خطأ
       onErrorContainer: const Color(0xFFCF6679), // نص على حاوية الخطأ
     ),
 
@@ -428,11 +446,11 @@ class AppTheme {
     cardTheme: CardThemeData(
       elevation: 2,
       color: const Color(0xFF161C2B), // لون البطاقة ( чуть أفتح من surface)
-      shadowColor: Colors.black.withOpacity(0.4), // ظل البطاقة
+      shadowColor: Colors.black.withAlpha(102), // ظل البطاقة
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(16.0),
         side: BorderSide(
-          color: const Color(0xFF2A3350).withOpacity(0.5), // حد أخف للبطاقة
+          color: const Color(0xFF2A3350).withAlpha(128), // حد أخف للبطاقة
           width: 0.5,
         ),
       ),
@@ -453,8 +471,8 @@ class AppTheme {
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(12),
         ),
-        disabledBackgroundColor: kTeal.withOpacity(0.5),
-        disabledForegroundColor: kNavy.withOpacity(0.5),
+        disabledBackgroundColor: kTeal.withAlpha(128),
+        disabledForegroundColor: kNavy.withAlpha(128),
       ),
     ),
 
@@ -471,10 +489,10 @@ class AppTheme {
           borderRadius: BorderRadius.circular(12),
         ),
         side: BorderSide(
-          color: kTeal.withOpacity(0.7), // لون الحد
+          color: kTeal.withAlpha(179), // لون الحد
           width: 1.5,
         ),
-        disabledForegroundColor: kTeal.withOpacity(0.5),
+        disabledForegroundColor: kTeal.withAlpha(128),
       ),
     ),
 
@@ -486,7 +504,7 @@ class AppTheme {
           fontFamily: 'Cairo',
           fontWeight: FontWeight.w600,
         ),
-        disabledForegroundColor: kTeal.withOpacity(0.5),
+        disabledForegroundColor: kTeal.withAlpha(128),
       ),
     ),
 
@@ -498,13 +516,13 @@ class AppTheme {
       border: OutlineInputBorder(
         borderRadius: BorderRadius.circular(12),
         borderSide: BorderSide(
-          color: const Color(0xFF2A3350).withOpacity(0.7), // حد عادي
+          color: const Color(0xFF2A3350).withAlpha(179), // حد عادي
         ),
       ),
       enabledBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(12),
         borderSide: BorderSide(
-          color: const Color(0xFF2A3350).withOpacity(0.7), // حد مفعل
+          color: const Color(0xFF2A3350).withAlpha(179), // حد مفعل
         ),
       ),
       focusedBorder: OutlineInputBorder(
@@ -548,10 +566,10 @@ class AppTheme {
           WidgetStateProperty.resolveWith<Color?>((Set<WidgetState> states) {
         if (states.contains(WidgetState.selected)) {
           return kTeal
-              .withOpacity(0.5); // لون الخلفية لما يكون مفعل (الأكسنت شفاف)
+              .withAlpha(128); // لون الخلفية لما يكون مفعل (الأكسنت شفاف)
         }
         return const Color(0xFF2A3350)
-            .withOpacity(0.5); // لون الخلفية لما يكون مش مفعل
+            .withAlpha(128); // لون الخلفية لما يكون مش مفعل
       }),
     ),
 

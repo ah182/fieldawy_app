@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../../../../widgets/shimmer_loader.dart';
 
 class SplashScreen extends StatelessWidget {
   const SplashScreen({super.key});
@@ -27,11 +28,7 @@ class SplashScreen extends StatelessWidget {
               width: 300, // You can adjust the size
             ),
             const SizedBox(height: 34),
-            CircularProgressIndicator(
-              // Use the app's theme color for the indicator
-              valueColor: AlwaysStoppedAnimation<Color>(
-                  Theme.of(context).colorScheme.primary),
-            ),
+            const AttractiveSplashLoader(size: 60),
           ],
         ),
       ),

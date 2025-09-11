@@ -7,6 +7,7 @@ import 'package:flutter/material.dart';
 // ignore: unnecessary_import
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
+import '../../../../../widgets/shimmer_loader.dart';
 
 import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
@@ -133,9 +134,7 @@ class DistributorsScreen extends HookConsumerWidget {
       [distributorsAsync, searchQuery.value],
     );
 
-    return MainScaffold(
-      selectedIndex: selectedIndex,
-      appBar: AppBar(
+    final sliverAppBar = SliverAppBar(
         elevation: 0,
         backgroundColor: theme.colorScheme.surface,
         foregroundColor: theme.colorScheme.onSurface,
@@ -146,6 +145,8 @@ class DistributorsScreen extends HookConsumerWidget {
             color: theme.colorScheme.onSurface,
           ),
         ),
+        pinned: true,
+        floating: true,
         bottom: PreferredSize(
           preferredSize: const Size.fromHeight(70),
           child: Padding(
@@ -186,39 +187,68 @@ class DistributorsScreen extends HookConsumerWidget {
             ),
           ),
         ),
-      ),
-      body: distributorsAsync.when(
-        data: (distributors) {
-          if (distributors.isEmpty) {
-            return _buildEmptyState(context, theme);
-          }
+      );
 
-          if (filteredDistributors.isEmpty && searchQuery.value.isNotEmpty) {
-            return _buildNoSearchResults(context, theme, searchQuery.value);
-          }
-
-          return Column(
-            children: [
-              // إحصائيات سريعة - badge صغير
-              _buildStatsHeader(context, theme, filteredDistributors),
-
-              // قائمة الموزعين
-              Expanded(
-                child: ListView.builder(
-                  padding: const EdgeInsets.all(16),
-                  itemCount: filteredDistributors.length,
-                  itemBuilder: (context, index) {
-                    final distributor = filteredDistributors[index];
-                    return _buildDistributorCard(context, theme, distributor);
-                  },
+    return MainScaffold(
+      selectedIndex: selectedIndex,
+      body: RefreshIndicator(
+        onRefresh: () => ref.refresh(distributorsProvider.future),
+        child: distributorsAsync.when(
+          data: (distributors) {
+            return CustomScrollView(
+              slivers: [
+                sliverAppBar,
+                if (distributors.isEmpty)
+                  SliverFillRemaining(
+                    child: _buildEmptyState(context, theme),
+                  )
+                else if (filteredDistributors.isEmpty && searchQuery.value.isNotEmpty)
+                  SliverFillRemaining(
+                    child: _buildNoSearchResults(context, theme, searchQuery.value),
+                  )
+                else ...[
+                  SliverToBoxAdapter(
+                    child: _buildStatsHeader(context, theme, filteredDistributors),
+                  ),
+                  SliverList(
+                    delegate: SliverChildBuilderDelegate(
+                      (context, index) {
+                        final distributor = filteredDistributors[index];
+                        return Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                          child: _buildDistributorCard(context, theme, distributor),
+                        );
+                      },
+                      childCount: filteredDistributors.length,
+                    ),
+                  ),
+                ]
+              ],
+            );
+          },
+          loading: () => CustomScrollView(
+            slivers: [
+              sliverAppBar,
+              SliverList(
+                delegate: SliverChildBuilderDelegate(
+                  (context, index) => Padding(
+                    padding: const EdgeInsets.only(bottom: 16.0, left: 16.0, right: 16.0),
+                    child: DistributorCardShimmer(),
+                  ),
+                  childCount: 8,
                 ),
               ),
             ],
-          );
-        },
-        loading: () => _buildLoadingState(context, theme),
-        error: (error, stack) =>
-            _buildErrorState(context, theme, error.toString()),
+          ),
+          error: (error, stack) => CustomScrollView(
+            slivers: [
+              sliverAppBar,
+              SliverFillRemaining(
+                child: _buildErrorState(context, theme, error.toString()),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }
@@ -324,8 +354,9 @@ class DistributorsScreen extends HookConsumerWidget {
                                 placeholder: (context, url) => Container(
                                   color: theme.colorScheme.surfaceVariant,
                                   child: const Center(
-                                    child: CircularProgressIndicator(
-                                        strokeWidth: 2),
+                                    child: ImageLoadingIndicator(
+                                  size: 24,
+                                ),
                                   ),
                                 ),
                                 errorWidget: (context, url, error) => Container(
@@ -548,7 +579,7 @@ class DistributorsScreen extends HookConsumerWidget {
                                   imageUrl: distributor.photoURL!,
                                   fit: BoxFit.cover,
                                   placeholder: (context, url) =>
-                                      const CircularProgressIndicator(),
+                                      const ImageLoadingIndicator(size: 24),
                                   errorWidget: (context, url, error) =>
                                       const Icon(Icons.person, size: 60),
                                 )
@@ -785,27 +816,6 @@ class DistributorsScreen extends HookConsumerWidget {
     }
   }
 
-
-  // حالة التحميل
-  Widget _buildLoadingState(BuildContext context, ThemeData theme) {
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          CircularProgressIndicator(
-            color: theme.colorScheme.primary,
-          ),
-          const SizedBox(height: 16),
-          Text(
-            'loadingDistributors'.tr(),
-            style: theme.textTheme.bodyLarge?.copyWith(
-              color: theme.colorScheme.onSurface.withOpacity(0.7),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
 
   // حالة الخطأ
   Widget _buildErrorState(BuildContext context, ThemeData theme, String error) {

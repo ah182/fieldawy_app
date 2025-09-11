@@ -2,6 +2,7 @@ import 'package:easy_localization/easy_localization.dart';
 import 'package:fieldawy_store/features/authentication/presentation/screens/auth_gate.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../../../widgets/shimmer_loader.dart';
 import '../../data/user_repository.dart';
 import '../../services/auth_service.dart';
 
@@ -137,7 +138,12 @@ class _ProfileCompletionScreenState
               ),
               const SizedBox(height: 48),
               if (_isLoading)
-                const Center(child: CircularProgressIndicator())
+                const Center(
+                    child: ShimmerLoader(
+                  width: 40,
+                  height: 40,
+                  isCircular: true,
+                ))
               else
                 ElevatedButton(
                   onPressed: _submitProfile,

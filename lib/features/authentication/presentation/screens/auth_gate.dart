@@ -12,6 +12,7 @@ import 'rejection_screen.dart';
 import 'pending_review_screen.dart';
 import 'splash_screen.dart';
 import 'package:fieldawy_store/features/home/presentation/screens/drawer_wrapper.dart'; // استيراد الغلاف الجديد
+import 'package:fieldawy_store/services/app_state_manager.dart';
 
 class AuthGate extends ConsumerWidget {
   const AuthGate({super.key});
@@ -49,9 +50,24 @@ class AuthGate extends ConsumerWidget {
                 return const PendingReviewScreen();
               }
 
-              // أخيرًا، إذا تم كل شيء، اذهب إلى الشاشة الرئيسية
+              // --- إضافة App State Persistence ---
+              // قراءة آخر صفحة محفوظة
+              final lastRoute = ref.watch(currentRouteProvider);
+              
+              // أخيرًا، إذا تم كل شيء، اذهب إلى الصفحة المحفوظة أو الرئيسية
               // (هذا يشمل حالة 'approved' و 'pending_review' للمستخدم الجديد)
-              return const DrawerWrapper(); // <-- التغيير هنا
+              if (lastRoute != 'home') {
+                // التحقق من أن الصفحة المحفوظة صالحة للتنفيذ
+                if (_isValidRouteForUser(lastRoute, userModel)) {
+                  // تنفيذ التنقل للصفحة المحفوظة
+                  WidgetsBinding.instance.addPostFrameCallback((_) {
+                    final navService = NavigationService(context, ref);
+                    navService.navigateTo(lastRoute);
+                  });
+                }
+              }
+              
+              return const DrawerWrapper(); // <-- الشاشة الرئيسية كـ fallback
             },
             loading: () => const SplashScreen(),
             error: (e, s) => Scaffold(body: Center(child: Text('Error: $e'))),
@@ -62,5 +78,20 @@ class AuthGate extends ConsumerWidget {
       loading: () => const SplashScreen(),
       error: (e, s) => Scaffold(body: Center(child: Text('Auth Error: $e'))),
     );
+  }
+
+  bool _isValidRouteForUser(String route, dynamic userModel) {
+    // تحديد الصفحات المتاحة حسب دور المستخدم
+    final allowedRoutes = ['home'];
+    
+    if (userModel.role == 'doctor') {
+      allowedRoutes.addAll(['distributors', 'addDrug', 'category']);
+    } else if (userModel.role == 'distributor') {
+      allowedRoutes.addAll(['products', 'dashboard', 'category']);
+    }
+    
+    allowedRoutes.addAll(['profile', 'settings']); // متاحة للجميع
+    
+    return allowedRoutes.contains(route);
   }
 }
