@@ -86,7 +86,7 @@ class AuthGate extends ConsumerWidget {
     
     if (userModel.role == 'doctor') {
       allowedRoutes.addAll(['distributors', 'addDrug', 'category']);
-    } else if (userModel.role == 'distributor') {
+    } else if (userModel.role == 'distributor' || userModel.role == 'company') {
       allowedRoutes.addAll(['products', 'dashboard', 'category']);
     }
     

@@ -12,9 +12,11 @@ import 'package:url_launcher/url_launcher.dart';
 import 'package:fieldawy_store/widgets/shimmer_loader.dart';
 import 'dart:math';
 import 'dart:ui' as ui;
+import 'dart:async';
 
 import '../../application/user_data_provider.dart';
 import 'package:fieldawy_store/features/profile/presentation/screens/profile_screen.dart';
+import 'package:awesome_snackbar_content/awesome_snackbar_content.dart';
 
 class HomeScreen extends HookConsumerWidget {
   const HomeScreen({super.key});
@@ -296,8 +298,15 @@ class HomeScreen extends HookConsumerWidget {
                           onPressed: () {
                             ScaffoldMessenger.of(context).showSnackBar(
                               SnackBar(
-                                                                content:
-                                    Text('addedToFavorites'.tr(args: [product.name])),
+                                elevation: 0,
+                                behavior: SnackBarBehavior.floating,
+                                backgroundColor: Colors.transparent,
+                                content: AwesomeSnackbarContent(
+                                  title: 'نجاح',
+                                  message: 'addedToFavorites'
+                                      .tr(args: [product.name]),
+                                  contentType: ContentType.success,
+                                ),
                                 duration: const Duration(seconds: 1),
                               ),
                             );
@@ -468,7 +477,16 @@ class HomeScreen extends HookConsumerWidget {
                                 }
                               } catch (e) {
                                 ScaffoldMessenger.of(context).showSnackBar(
-                                  SnackBar(content: Text('تعذر فتح الرابط')),
+                                  SnackBar(
+                                    elevation: 0,
+                                    behavior: SnackBarBehavior.floating,
+                                    backgroundColor: Colors.transparent,
+                                    content: AwesomeSnackbarContent(
+                                      title: 'تنبيه',
+                                      message: 'تعذر فتح الرابط',
+                                      contentType: ContentType.warning,
+                                    ),
+                                  ),
                                 );
                               }
                             },
@@ -530,6 +548,16 @@ class HomeScreen extends HookConsumerWidget {
     // متغير البحث مع TextEditingController
     final searchQuery = useState<String>('');
     final searchController = useTextEditingController();
+    final focusNode = useFocusNode();
+    final debouncedSearchQuery = useState<String>('');
+    
+    // تحديث البحث بعد تأخير قصير
+    useEffect(() {
+      final timer = Timer(Duration(milliseconds: 500), () {
+        debouncedSearchQuery.value = searchQuery.value;
+      });
+      return timer.cancel;
+    }, [searchQuery.value]);
 
     final sliverAppBar = SliverAppBar(
       leading: IconButton(
@@ -537,7 +565,10 @@ class HomeScreen extends HookConsumerWidget {
         onPressed: () => ZoomDrawer.of(context)!.toggle(),
       ),
       title: Text('homeScreen'.tr()),
-      elevation: 2,
+      elevation: 0,
+      scrolledUnderElevation: 0,
+      forceElevated: false,
+      backgroundColor: Theme.of(context).colorScheme.surface,
       pinned: true,
       actions: [
         Consumer(
@@ -619,50 +650,54 @@ class HomeScreen extends HookConsumerWidget {
         preferredSize: const Size.fromHeight(kToolbarHeight + 50.0),
         child: Column(
           children: [
-            // === شريط البحث المُصحح ===
+            // === شريط البحث المُحسن ===
             Padding(
               padding:
                   const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
-              child: TextField(
-                controller: searchController, // إضافة الـ controller
-                onChanged: (value) {
-                  searchQuery.value = value; // تحديث حالة البحث
-                },
-                decoration: InputDecoration(
-                  hintText: 'ابحث عن دواء، مادة فعالة...',
-                  hintStyle: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: Theme.of(context)
-                            .colorScheme
-                            .onSurface
-                            .withOpacity(0.6),
-                      ),
-                  prefixIcon: Icon(
-                    Icons.search,
-                    color: Theme.of(context).colorScheme.primary,
-                  ),
-                  suffixIcon: searchQuery.value.isNotEmpty
-                      ? IconButton(
-                          icon: const Icon(Icons.clear),
-                          onPressed: () {
-                            // الحل الصحيح للمسح
-                            searchController
-                                .clear(); // مسح النص من الـ TextField
-                            searchQuery.value = ''; // تحديث حالة البحث
-                          },
-                        )
-                      : Icon(
-                          Icons.tune,
+              child: Container(
+                decoration: BoxDecoration(
+                  color: Theme.of(context).colorScheme.surface,
+                  borderRadius: BorderRadius.circular(30.0),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Theme.of(context).shadowColor.withOpacity(0.1),
+                      blurRadius: 8,
+                      spreadRadius: 1,
+                      offset: const Offset(0, 2),
+                    ),
+                  ],
+                ),
+                child: TextField(
+                  controller: searchController,
+                  focusNode: focusNode,
+                  onChanged: (value) {
+                    searchQuery.value = value;
+                  },
+                  decoration: InputDecoration(
+                    hintText: 'ابحث عن دواء، مادة فعالة...',
+                    hintStyle: Theme.of(context).textTheme.bodySmall?.copyWith(
                           color: Theme.of(context)
                               .colorScheme
                               .onSurface
                               .withOpacity(0.5),
                         ),
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(30.0),
-                    borderSide: BorderSide.none,
+                    prefixIcon: Icon(
+                      Icons.search,
+                      color: Theme.of(context).colorScheme.primary,
+                      size: 20,
+                    ),
+                    suffixIcon: searchQuery.value.isNotEmpty
+                        ? IconButton(
+                            icon: const Icon(Icons.clear, size: 20),
+                            onPressed: () {
+                              searchController.clear();
+                              searchQuery.value = '';
+                            },
+                          )
+                        : null,
+                    border: InputBorder.none,
+                    contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
                   ),
-                  filled: true,
-                  fillColor: Theme.of(context).colorScheme.surfaceVariant,
                 ),
               ),
             ),
@@ -672,7 +707,13 @@ class HomeScreen extends HookConsumerWidget {
       ),
     );
 
-    return Scaffold(
+    return GestureDetector(
+      onTap: () {
+        // إزالة التركيز من شريط البحث عند النقر في أي مكان آخر
+        focusNode.unfocus();
+      },
+      child: Scaffold(
+      backgroundColor: Theme.of(context).colorScheme.surface,
       body: RefreshIndicator(
         onRefresh: () async {
           ref.invalidate(allDistributorProductsProvider);
@@ -682,7 +723,7 @@ class HomeScreen extends HookConsumerWidget {
           data: (products) {
             // === فلترة المنتجات حسب البحث المحسن ===
             List<ProductModel> filteredProducts;
-            if (searchQuery.value.isEmpty) {
+            if (debouncedSearchQuery.value.isEmpty) {
               // إذا لم يكن هناك بحث، اعرض منتجات عشوائية
               final random = Random();
               final List<ProductModel> shuffledProducts = List.from(products)
@@ -693,7 +734,7 @@ class HomeScreen extends HookConsumerWidget {
             } else {
               // فلترة محسنة حسب نص البحث
               filteredProducts = products.where((product) {
-                final query = searchQuery.value.toLowerCase().trim();
+                final query = debouncedSearchQuery.value.toLowerCase().trim();
 
                 // === البحث الأساسي ===
                 final productName = product.name.toLowerCase(); // اسم الدواء
@@ -730,7 +771,7 @@ class HomeScreen extends HookConsumerWidget {
 
               // === ترتيب النتائج حسب الأولوية ===
               filteredProducts.sort((a, b) {
-                final query = searchQuery.value.toLowerCase().trim();
+                final query = debouncedSearchQuery.value.toLowerCase().trim();
 
                 // حساب نقاط الأولوية لكل منتج
                 int scoreA = _calculateSearchScore(a, query);
@@ -783,7 +824,7 @@ class HomeScreen extends HookConsumerWidget {
                       padding: const EdgeInsets.symmetric(
                           horizontal: 12, vertical: 6),
                       decoration: BoxDecoration(
-                        color: searchQuery.value.isEmpty
+                        color: debouncedSearchQuery.value.isEmpty
                             ? Theme.of(context)
                                 .colorScheme
                                 .primaryContainer
@@ -794,7 +835,7 @@ class HomeScreen extends HookConsumerWidget {
                                 .withOpacity(0.3),
                         borderRadius: BorderRadius.circular(12),
                         border: Border.all(
-                          color: searchQuery.value.isEmpty
+                          color: debouncedSearchQuery.value.isEmpty
                               ? Theme.of(context)
                                   .colorScheme
                                   .primary
@@ -810,24 +851,24 @@ class HomeScreen extends HookConsumerWidget {
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
                           Icon(
-                            searchQuery.value.isEmpty
+                            debouncedSearchQuery.value.isEmpty
                                 ? Icons.storefront_outlined
                                 : Icons.search_outlined,
                             size: 16,
-                            color: searchQuery.value.isEmpty
+                            color: debouncedSearchQuery.value.isEmpty
                                 ? Theme.of(context).colorScheme.primary
                                 : Theme.of(context).colorScheme.secondary,
                           ),
                           const SizedBox(width: 8),
                           Text(
-                            searchQuery.value.isEmpty
+                            debouncedSearchQuery.value.isEmpty
                                 ? 'عرض ${filteredProducts.length} منتج من أحدث العروض'
                                 : 'وُجد ${filteredProducts.length} منتج${filteredProducts.length == 1 ? '' : (filteredProducts.length <= 10 ? 'ات' : '')}',
                             style: Theme.of(context)
                                 .textTheme
                                 .bodySmall
                                 ?.copyWith(
-                                  color: searchQuery.value.isEmpty
+                                  color: debouncedSearchQuery.value.isEmpty
                                       ? Theme.of(context).colorScheme.primary
                                       : Theme.of(context)
                                           .colorScheme
@@ -840,7 +881,7 @@ class HomeScreen extends HookConsumerWidget {
                     ),
                   ),
                   if (filteredProducts.isEmpty &&
-                      searchQuery.value.isNotEmpty)
+                      debouncedSearchQuery.value.isNotEmpty)
                     SliverFillRemaining(
                       child: Center(
                         child: Column(
@@ -856,7 +897,7 @@ class HomeScreen extends HookConsumerWidget {
                             ),
                             const SizedBox(height: 16),
                             Text(
-                              'لا توجد نتائج للبحث عن "${searchQuery.value}"',
+                              'لا توجد نتائج للبحث عن "${debouncedSearchQuery.value}"',
                               style: Theme.of(context)
                                   .textTheme
                                   .titleMedium
@@ -911,7 +952,7 @@ class HomeScreen extends HookConsumerWidget {
                           (context, index) {
                             final product = filteredProducts[index];
                             return _buildProductCard(
-                                context, product, searchQuery.value);
+                                context, product, debouncedSearchQuery.value);
                           },
                           childCount: filteredProducts.length,
                         ),
@@ -971,6 +1012,7 @@ class HomeScreen extends HookConsumerWidget {
             ],
           ),
         ),
+      ),
       ),
     );
   }
@@ -1051,10 +1093,16 @@ class HomeScreen extends HookConsumerWidget {
                         onPressed: () {
                           ScaffoldMessenger.of(context).showSnackBar(
                             SnackBar(
-                              content:
-                                  Text('تمت إضافة ${product.name} للمفضلة'),
-                              duration: const Duration(seconds: 1),
+                              elevation: 0,
                               behavior: SnackBarBehavior.floating,
+                              backgroundColor: Colors.transparent,
+                              content: AwesomeSnackbarContent(
+                                title: 'نجاح',
+                                message:
+                                    'تمت إضافة ${product.name} للمفضلة',
+                                contentType: ContentType.success,
+                              ),
+                              duration: const Duration(seconds: 1),
                             ),
                           );
                         },

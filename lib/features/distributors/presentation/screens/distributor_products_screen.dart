@@ -19,6 +19,7 @@ import "package:url_launcher/url_launcher.dart";
 import "package:fieldawy_store/widgets/shimmer_loader.dart";
 
 import '../../../products/domain/product_model.dart';
+import 'package:awesome_snackbar_content/awesome_snackbar_content.dart';
 
 /* -------------------------------------------------------------------------- */
 /*                               DATA PROVIDERS                               */
@@ -384,8 +385,15 @@ class DistributorProductsScreen extends HookConsumerWidget {
                           onPressed: () {
                             ScaffoldMessenger.of(context).showSnackBar(
                               SnackBar(
-                                content: Text('addedToFavorites'
-                                    .tr(args: [product.name])),
+                                elevation: 0,
+                                behavior: SnackBarBehavior.floating,
+                                backgroundColor: Colors.transparent,
+                                content: AwesomeSnackbarContent(
+                                  title: 'نجاح',
+                                  message: 'addedToFavorites'
+                                      .tr(args: [product.name]),
+                                  contentType: ContentType.success,
+                                ),
                                 duration: const Duration(seconds: 1),
                               ),
                             );
@@ -542,7 +550,16 @@ class DistributorProductsScreen extends HookConsumerWidget {
                                 }
                               } catch (e) {
                                 ScaffoldMessenger.of(context).showSnackBar(
-                                  SnackBar(content: Text('تعذر فتح الرابط')),
+                                  SnackBar(
+                                    elevation: 0,
+                                    behavior: SnackBarBehavior.floating,
+                                    backgroundColor: Colors.transparent,
+                                    content: AwesomeSnackbarContent(
+                                      title: 'تنبيه',
+                                      message: 'تعذر فتح الرابط',
+                                      contentType: ContentType.warning,
+                                    ),
+                                  ),
                                 );
                               }
                             },

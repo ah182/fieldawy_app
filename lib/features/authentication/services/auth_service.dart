@@ -6,15 +6,12 @@ import '../data/user_repository.dart';
 // AuthService الآن مسؤول فقط عن المصادقة
 class AuthService {
   final FirebaseAuth _auth;
-  final GoogleSignIn _googleSignIn;
   final UserRepository _userRepository;
 
   AuthService({
     required FirebaseAuth auth,
-    required GoogleSignIn googleSignIn,
     required UserRepository userRepository,
   })  : _auth = auth,
-        _googleSignIn = googleSignIn,
         _userRepository = userRepository;
 
   User? get currentUser => _auth.currentUser;
@@ -22,7 +19,12 @@ class AuthService {
 
   Future<User?> signInWithGoogle() async {
     try {
-      final GoogleSignInAccount? googleUser = await _googleSignIn.signIn();
+      // Create a new GoogleSignIn instance each time to avoid cached credentials issues
+      final googleSignIn = GoogleSignIn(scopes: ['email']);
+      
+      
+      
+      final GoogleSignInAccount? googleUser = await googleSignIn.signIn();
       if (googleUser == null) return null;
 
       final GoogleSignInAuthentication googleAuth =
@@ -46,8 +48,32 @@ class AuthService {
   }
 
   Future<void> signOut() async {
-    await _googleSignIn.signOut();
-    await _auth.signOut();
+    try {
+      // Sign out from Firebase first
+      await _auth.signOut();
+    } catch (e) {
+      print('Error signing out from Firebase: $e');
+    }
+    
+    try {
+      // Create a new GoogleSignIn instance for sign out
+      final googleSignIn = GoogleSignIn(scopes: ['email']);
+      
+      // Sign out from Google
+      await googleSignIn.signOut();
+    } catch (e) {
+      print('Error signing out from Google: $e');
+    }
+    
+    try {
+      // Create a new GoogleSignIn instance for disconnect
+      final googleSignIn = GoogleSignIn(scopes: ['email']);
+      
+      // Disconnect Google account to ensure complete logout
+      await googleSignIn.disconnect();
+    } catch (e) {
+      print('Error disconnecting from Google: $e');
+    }
   }
 }
 
@@ -55,7 +81,6 @@ class AuthService {
 final authServiceProvider = Provider<AuthService>((ref) {
   return AuthService(
     auth: FirebaseAuth.instance,
-    googleSignIn: GoogleSignIn(scopes: ['email']),
     userRepository: ref.watch(userRepositoryProvider),
   );
 });

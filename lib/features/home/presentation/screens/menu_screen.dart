@@ -13,6 +13,7 @@ import 'package:fieldawy_store/features/products/presentation/screens/my_product
 import 'package:flutter_zoom_drawer/flutter_zoom_drawer.dart';
 import 'package:fieldawy_store/features/distributors/presentation/screens/distributors_screen.dart';
 import 'package:fieldawy_store/widgets/shimmer_loader.dart';
+import 'package:awesome_dialog/awesome_dialog.dart';
 
 class MenuScreen extends ConsumerWidget {
   const MenuScreen({super.key});
@@ -48,7 +49,7 @@ class MenuScreen extends ConsumerWidget {
                   if (user == null) return const SizedBox.shrink();
                   if (user.role == 'doctor') {
                     return _buildDoctorMenu(context);
-                  } else if (user.role == 'distributor') {
+                  } else if (user.role == 'distributor' || user.role == 'company') {
                     return _buildDistributorMenu(context);
                   } else {
                     return _buildViewerMenu(context);
@@ -64,7 +65,17 @@ class MenuScreen extends ConsumerWidget {
               icon: Icons.logout,
               title: 'signOut'.tr(),
               onTap: () {
-                ref.read(authServiceProvider).signOut();
+                AwesomeDialog(
+                  context: context,
+                  dialogType: DialogType.question,
+                  animType: AnimType.scale,
+                  title: 'logoutConfirmationTitle'.tr(),
+                  desc: 'logoutConfirmationMessage'.tr(),
+                  btnCancelOnPress: () {},
+                  btnOkOnPress: () {
+                    ref.read(authServiceProvider).signOut();
+                  },
+                ).show();
               },
             ),
             const SizedBox(height: 20),

@@ -30,7 +30,7 @@ class MainScaffold extends ConsumerWidget {
     final userRole = ref.read(userDataProvider).asData?.value?.role ?? '';
 
     Widget screen;
-    if (userRole == 'distributor') {
+    if (userRole == 'distributor' || userRole == 'company') {
       switch (index) {
         case 0:
           screen = const MyProductsScreen();
@@ -88,7 +88,7 @@ class MainScaffold extends ConsumerWidget {
       floatingActionButton: floatingActionButton,
       bottomNavigationBar: userData.when(
         data: (user) {
-          final isDistributor = user?.role == 'distributor';
+          final isDistributor = user?.role == 'distributor' || user?.role == 'company';
           final isDoctor = user?.role == 'doctor';
 
           return SalomonBottomBar(

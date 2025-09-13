@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../services/auth_service.dart';
+import 'package:awesome_snackbar_content/awesome_snackbar_content.dart';
 
 class PendingReviewScreen extends ConsumerWidget {
   const PendingReviewScreen({super.key});
@@ -30,8 +31,16 @@ class PendingReviewScreen extends ConsumerWidget {
       } else {
         if (context.mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-             SnackBar(
-                                content: Text('cannotOpenWhatsApp'.tr())),
+            SnackBar(
+              elevation: 0,
+              behavior: SnackBarBehavior.floating,
+              backgroundColor: Colors.transparent,
+              content: AwesomeSnackbarContent(
+                title: 'تنبيه',
+                message: 'cannotOpenWhatsApp'.tr(),
+                contentType: ContentType.warning,
+              ),
+            ),
           );
         }
       }

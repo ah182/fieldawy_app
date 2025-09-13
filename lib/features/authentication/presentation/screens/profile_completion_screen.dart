@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../../widgets/shimmer_loader.dart';
 import '../../data/user_repository.dart';
 import '../../services/auth_service.dart';
+import 'package:awesome_snackbar_content/awesome_snackbar_content.dart';
 
 class ProfileCompletionScreen extends ConsumerStatefulWidget {
   final String documentUrl;
@@ -79,7 +80,16 @@ class _ProfileCompletionScreenState
         // نتأكد من إيقاف التحميل عند حدوث خطأ
         setState(() => _isLoading = false);
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('${'profileUpdateFailed'.tr()}: $e')),
+          SnackBar(
+            elevation: 0,
+            behavior: SnackBarBehavior.floating,
+            backgroundColor: Colors.transparent,
+            content: AwesomeSnackbarContent(
+              title: 'خطأ',
+              message: '${'profileUpdateFailed'.tr()}: $e',
+              contentType: ContentType.failure,
+            ),
+          ),
         );
       }
     }

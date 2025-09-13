@@ -1,8 +1,8 @@
 {
     "welcome": "أهلاً بك في  فيلدوي ستور",
     "choose_your_role": "الرجاء اختيار دورك للمتابعة",
-    "doctor_role": "أنا طبيب بيطري",
-    "distributor_role": "أنا موزع / مؤسسة",
+    "doctor_role": "طبيب بيطري",
+    "distributor_role": "موزع / مؤسسة",
     "signInWithGoogle": "تسجيل الدخول بواسطة جوجل",
     "loginFailed": "فشل تسجيل الدخول. حاول مرة أخرى.",
     "loginCancelled": "تم إلغاء تسجيل الدخول.",
@@ -27,6 +27,10 @@
     "rejectionMessage": "هذا التطبيق مخصص للأطباء البيطريين وموزعي الأدوية البيطرية فقط ولا يسمح بالدخول لغير الفئات المصرح بها.\n\nإذا كنت من ضمن الفئات المذكورة، يرجى إعادة رفع المستندات وانتظار موافقة المدير.",
     "reuploadDocuments": "إعادة رفع المستندات",
     "signOut": "تسجيل الخروج",
+    "logoutConfirmationTitle": "تأكيد تسجيل الخروج",
+    "logoutConfirmationMessage": "هل أنت متأكد أنك تريد تسجيل الخروج؟",
+    "languageChangeConfirmationTitle": "تأكيد تغيير اللغة",
+    "languageChangeConfirmationMessage": "هل أنت متأكد أنك تريد تغيير اللغة إلى {language}؟",
     "accountUnderReview": "حسابك قيد المراجعة",
     "pendingMessage": "شكرًا لك. لقد تم استلام مستنداتك بنجاح وستتم مراجعتها من قبل المدير في أقرب وقت ممكن.",
     "contactSupport": "التواصل مع الدعم",
@@ -95,5 +99,6 @@
     "english": "English",
     "arabic": "العربية",
     "cannotOpenWhatsApp": "لا يمكن فتح واتساب. الرجاء التأكد من تثبيته.",
-    "categoryScreen": "شاشة الفئات"
+    "categoryScreen": "شاشة الفئات",
+    "cancel": "إلغاء"
 }

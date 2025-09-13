@@ -14,6 +14,7 @@ import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:fieldawy_store/features/distributors/presentation/screens/distributor_products_screen.dart';
+import 'package:awesome_snackbar_content/awesome_snackbar_content.dart';
 
 // نموذج بيانات الموزع - مُحدث
 class DistributorModel {
@@ -49,7 +50,7 @@ class DistributorModel {
       photoURL: data?['photoURL'],
       email: data?['email'],
       companyName: data?['companyName'],
-      distributorType: data?['distributorType'] ?? 'individual',
+      distributorType: data?['role'],
       productCount: data?['productCount'] ?? 0,
       isVerified: data?['isVerified'] ?? false,
       joinDate: data?['joinDate']?.toDate(),
@@ -62,7 +63,7 @@ class DistributorModel {
 final distributorsProvider = StreamProvider<List<DistributorModel>>((ref) {
   return FirebaseFirestore.instance
       .collection('users')
-      .where('role', isEqualTo: 'distributor')
+      .where('role', whereIn: ['distributor', 'company'])
       .snapshots()
       .asyncMap((userSnapshot) async {
     if (userSnapshot.docs.isEmpty) {
@@ -104,6 +105,13 @@ final distributorsProvider = StreamProvider<List<DistributorModel>>((ref) {
 
 class DistributorsScreen extends HookConsumerWidget {
   const DistributorsScreen({super.key});
+
+  String _getRoleLabel(String? role) {
+    if (role == 'company') {
+      return 'distributionCompany'.tr();
+    }
+    return 'individualDistributor'.tr();
+  }
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -436,8 +444,7 @@ class DistributorsScreen extends HookConsumerWidget {
                           const SizedBox(width: 5),
                           Expanded(
                             child: Text(
-                              distributor.companyName ??
-                                  (isCompany ? 'distributionCompany'.tr() : 'individualDistributor'.tr()),
+                              distributor.companyName ?? _getRoleLabel(distributor.distributorType),
                               style: theme.textTheme.bodySmall?.copyWith(
                                 color: theme.colorScheme.onSurface
                                     .withOpacity(0.7),
@@ -660,9 +667,7 @@ class DistributorsScreen extends HookConsumerWidget {
                       theme,
                       Icons.business_outlined,
                       'distributorType'.tr(),
-                      distributor.distributorType == 'company'
-                          ? 'distributionCompany'.tr()
-                          : 'individualDistributor'.tr(),
+                      _getRoleLabel(distributor.distributorType),
                     ),
                     if (distributor.whatsappNumber != null &&
                         distributor.whatsappNumber!.isNotEmpty)
@@ -778,8 +783,14 @@ class DistributorsScreen extends HookConsumerWidget {
     if (phoneNumber == null || phoneNumber.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('phoneNumberNotAvailable'.tr()),
-          backgroundColor: Theme.of(context).colorScheme.error,
+          elevation: 0,
+          behavior: SnackBarBehavior.floating,
+          backgroundColor: Colors.transparent,
+          content: AwesomeSnackbarContent(
+            title: 'خطأ',
+            message: 'phoneNumberNotAvailable'.tr(),
+            contentType: ContentType.failure,
+          ),
         ),
       );
       return;
@@ -805,11 +816,13 @@ class DistributorsScreen extends HookConsumerWidget {
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('couldNotOpenWhatsApp'.tr()),
-          backgroundColor: Theme.of(context).colorScheme.error,
-          action: SnackBarAction(
-            label: 'ok'.tr(),
-            onPressed: () {},
+          elevation: 0,
+          behavior: SnackBarBehavior.floating,
+          backgroundColor: Colors.transparent,
+          content: AwesomeSnackbarContent(
+            title: 'خطأ',
+            message: 'couldNotOpenWhatsApp'.tr(),
+            contentType: ContentType.failure,
           ),
         ),
       );

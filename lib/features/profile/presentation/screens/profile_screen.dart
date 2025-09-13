@@ -1,3 +1,5 @@
+// ignore_for_file: unused_import
+
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:fieldawy_store/features/authentication/services/auth_service.dart';
@@ -8,9 +10,38 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:fieldawy_store/widgets/shimmer_loader.dart';
 
 import 'package:fieldawy_store/widgets/main_scaffold.dart';
+import 'package:fieldawy_store/features/authentication/presentation/screens/login_screen.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+
 
 class ProfileScreen extends ConsumerWidget {
   const ProfileScreen({super.key});
+
+  String _getRoleDisplayName(String role) {
+    switch (role) {
+      case 'doctor':
+        return 'Veterinarian';
+      case 'company':
+        return 'Distribution company';
+      case 'distributor':
+        return 'Individual distributor';
+      default:
+        return role;
+    }
+  }
+
+  IconData _getRoleIcon(String role) {
+    switch (role) {
+      case 'doctor':
+        return Icons.local_hospital;
+      case 'company':
+        return Icons.business;
+      case 'distributor':
+        return Icons.storefront;
+      default:
+        return Icons.person;
+    }
+  }
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -88,6 +119,35 @@ class ProfileScreen extends ConsumerWidget {
                                 ?.copyWith(fontWeight: FontWeight.bold),
                           ),
                           const SizedBox(height: 4),
+                          // ignore: unnecessary_null_comparison
+                          if (userModel.role != null)
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 12, vertical: 4),
+                              decoration: BoxDecoration(
+                                color: colorScheme.secondaryContainer,
+                                borderRadius: BorderRadius.circular(9999),
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Icon(
+                                    _getRoleIcon(userModel.role),
+                                    size: 14,
+                                    color: colorScheme.onSecondaryContainer,
+                                  ),
+                                  const SizedBox(width: 6),
+                                  Text(
+                                    _getRoleDisplayName(userModel.role),
+                                    style: textTheme.bodySmall?.copyWith(
+                                      color: colorScheme.onSecondaryContainer,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          const SizedBox(height: 8),
                           if (userModel.email != null)
                             Container(
                               padding: const EdgeInsets.symmetric(
@@ -149,25 +209,7 @@ class ProfileScreen extends ConsumerWidget {
                               ],
                             ),
                           ),
-                          const SizedBox(height: 24),
-
-                          // --- Logout Section ---
-                          Card(
-                            elevation: 1,
-                            shadowColor:
-                                Theme.of(context).shadowColor.withOpacity(0.1),
-                            clipBehavior: Clip.antiAlias,
-                            shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(12)),
-                            child: _buildProfileOption(
-                              icon: Icons.logout,
-                              title: 'signOut'.tr(),
-                              isDestructive: true,
-                              onTap: () {
-                                ref.read(authServiceProvider).signOut();
-                              },
-                            ),
-                          ),
+                          
                         ],
                       ),
                     );

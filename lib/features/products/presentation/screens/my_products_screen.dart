@@ -8,6 +8,7 @@ import 'package:flutter_hooks/flutter_hooks.dart';
 // ignore: unnecessary_import
 import 'package:flutter_riverpod/flutter_riverpod.dart'; // <= مهم علشان HookConsumerWidget
 import 'dart:ui' as ui; // <= لتفادي أي تعارض مع TextDirection
+import 'dart:async'; // <= مهم علشان Completer
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:fieldawy_store/features/products/domain/product_model.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
@@ -16,6 +17,8 @@ import 'package:fieldawy_store/features/authentication/services/auth_service.dar
 import 'package:fieldawy_store/widgets/main_scaffold.dart';
 import 'package:fieldawy_store/widgets/custom_product_dialog.dart';
 import 'package:fieldawy_store/widgets/shimmer_loader.dart';
+import 'package:awesome_snackbar_content/awesome_snackbar_content.dart';
+import 'package:awesome_dialog/awesome_dialog.dart';
 
 class MyProductsScreen extends HookConsumerWidget {
   // <= غيرنا لـ HookConsumerWidget
@@ -55,26 +58,29 @@ class MyProductsScreen extends HookConsumerWidget {
   /// دالة تأكيد الحذف
   static Future<bool?> _showDeleteConfirmationDialog(
       BuildContext context, String productName) {
-    return showDialog<bool>(
+    final completer = Completer<bool?>();
+
+    AwesomeDialog(
       context: context,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          title: Text('تأكيد الحذف'),
-          content: Text('هل أنت متأكد من حذف المنتج "$productName"؟'),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(false),
-              child: Text('إلغاء'),
-            ),
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(true),
-              style: TextButton.styleFrom(foregroundColor: Colors.red),
-              child: Text('حذف'),
-            ),
-          ],
-        );
+      dialogType: DialogType.noHeader,
+      animType: AnimType.scale,
+      title: 'تأكيد الحذف',
+      desc: 'هل أنت متأكد من حذف المنتج "$productName"؟',
+      btnCancelText: 'إلغاء',
+      btnOkText: 'حذف',
+      btnCancelIcon: Icons.cancel_outlined,
+      btnOkIcon: Icons.delete,
+      btnCancelColor: Colors.grey,
+      btnOkColor: Colors.red,
+      btnCancelOnPress: () {
+        completer.complete(false);
       },
-    );
+      btnOkOnPress: () {
+        completer.complete(true);
+      },
+    ).show();
+
+    return completer.future;
   }
 
   /// دالة تعديل السعر
@@ -83,48 +89,57 @@ class MyProductsScreen extends HookConsumerWidget {
     final TextEditingController priceController = TextEditingController(
       text: product.price?.toString() ?? '',
     );
+    final completer = Completer<double?>();
 
-    return showDialog<double>(
+    AwesomeDialog(
       context: context,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          title: Text('تعديل سعر ${product.name}'),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              TextField(
-                controller: priceController,
-                keyboardType: TextInputType.numberWithOptions(decimal: true),
-                decoration: InputDecoration(
-                  labelText: 'السعر الجديد',
-                  suffixText: 'جنيه',
-                  border: OutlineInputBorder(),
-                ),
-              ),
-            ],
+      dialogType: DialogType.noHeader,
+      animType: AnimType.scale,
+      title: 'تعديل سعر ${product.name}',
+      body: Column(
+        children: [
+          TextField(
+            controller: priceController,
+            keyboardType: TextInputType.numberWithOptions(decimal: true),
+            decoration: InputDecoration(
+              labelText: 'السعر الجديد',
+              suffixText: 'جنيه',
+              border: OutlineInputBorder(),
+            ),
           ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(),
-              child: Text('إلغاء'),
-            ),
-            TextButton(
-              onPressed: () {
-                final newPrice = double.tryParse(priceController.text);
-                if (newPrice != null && newPrice > 0) {
-                  Navigator.of(context).pop(newPrice);
-                } else {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text('الرجاء إدخال سعر صحيح')),
-                  );
-                }
-              },
-              child: Text('تحديث'),
-            ),
-          ],
-        );
+        ],
+      ),
+      btnCancelText: 'إلغاء',
+      btnOkText: 'تحديث',
+      btnCancelIcon: Icons.cancel_outlined,
+      btnOkIcon: Icons.check,
+      btnCancelColor: Colors.grey,
+      btnOkColor: Theme.of(context).colorScheme.primary,
+      btnCancelOnPress: () {
+        completer.complete(null);
       },
-    );
+      btnOkOnPress: () {
+        final newPrice = double.tryParse(priceController.text);
+        if (newPrice != null && newPrice > 0) {
+          completer.complete(newPrice);
+        } else {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      elevation: 0,
+                      behavior: SnackBarBehavior.floating,
+                      backgroundColor: Colors.transparent,
+                      content: AwesomeSnackbarContent(
+                        title: 'تنبيه',
+                        message: 'الرجاء إدخال سعر صحيح',
+                        contentType: ContentType.warning,
+                      ),
+                    ),
+                  );
+        }
+      },
+    ).show();
+
+    return completer.future;
   }
 
   void _showAddProductOptions(BuildContext context) {
@@ -166,10 +181,11 @@ class MyProductsScreen extends HookConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     // === استدعاء الـ Provider اللي بيجيب قائمة "أدويةي" ===
-    final myProductsAsync = ref.watch(myProductsProvider);
+    // Using the cached provider for better performance
+    final myProductsAsync = ref.watch(cachedMyProductsProvider);
     final userRole = ref.watch(userDataProvider).asData?.value?.role ?? '';
 
-    if (userRole != 'distributor') {
+    if (userRole != 'distributor' && userRole != 'company') {
       return Scaffold(
         appBar: AppBar(title: Text('myMedicines'.tr())),
         body: Center(
@@ -180,6 +196,11 @@ class MyProductsScreen extends HookConsumerWidget {
 
     // === متغير علشان نسيط نص البحث ===
     final searchQuery = useState<String>(''); // <= متغير البحث
+    
+    // Preload data for smoother transitions
+    ref.listen(cachedMyProductsProvider, (previous, next) {
+      // This will trigger data loading when the screen is first built
+    });
 
     return MainScaffold(
       selectedIndex: 0,
@@ -201,7 +222,9 @@ class MyProductsScreen extends HookConsumerWidget {
       // === تعديل AppBar علشان يحتوي على SearchBar وعداد المنتجات ===
       appBar: AppBar(
         title: Text('myMedicines'.tr()),
-        elevation: 2,
+        elevation: 0,
+        scrolledUnderElevation: 0,
+        backgroundColor: Theme.of(context).colorScheme.surface,
         // إضافة SearchBar وعداد المنتجات في الـ AppBar
         bottom: PreferredSize(
           preferredSize: const Size.fromHeight(
@@ -322,7 +345,7 @@ class MyProductsScreen extends HookConsumerWidget {
         ),
       ),
       body: RefreshIndicator(
-        onRefresh: () => ref.refresh(myProductsProvider.future),
+        onRefresh: () => ref.refresh(cachedMyProductsProvider.future),
         child: myProductsAsync.when(
           data: (products) {
             // === فلترة المنتجات حسب نص البحث (في الاسم، الشركة، والمادة الفعالة) ===
@@ -453,10 +476,30 @@ class MyProductsScreen extends HookConsumerWidget {
                             child: CachedNetworkImage(
                               imageUrl: product.imageUrl,
                               fit: BoxFit.contain,
-                              placeholder: (context, url) =>
-                                  const Icon(Icons.medication, size: 30),
-                              errorWidget: (context, url, error) =>
-                                  const Icon(Icons.error_outline, size: 30),
+                              placeholder: (context, url) => Container(
+                                width: 50,
+                                height: 50,
+                                decoration: BoxDecoration(
+                                  color: Theme.of(context).colorScheme.surfaceVariant,
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                                child: const Center(
+                                  child: ImageLoadingIndicator(size: 30),
+                                ),
+                              ),
+                              errorWidget: (context, url, error) => Container(
+                                width: 50,
+                                height: 50,
+                                decoration: BoxDecoration(
+                                  color: Theme.of(context).colorScheme.surfaceVariant,
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                                child: const Icon(
+                                  Icons.error_outline,
+                                  size: 30,
+                                  color: Colors.grey,
+                                ),
+                              ),
                             ),
                           ),
                         ),
@@ -575,14 +618,30 @@ class MyProductsScreen extends HookConsumerWidget {
 
                                     ScaffoldMessenger.of(context).showSnackBar(
                                       SnackBar(
-                                          content: Text('تم تحديث السعر بنجاح')),
+                                        elevation: 0,
+                                        behavior: SnackBarBehavior.floating,
+                                        backgroundColor: Colors.transparent,
+                                        content: AwesomeSnackbarContent(
+                                          title: 'نجاح',
+                                          message: 'تم تحديث السعر بنجاح',
+                                          contentType: ContentType.success,
+                                        ),
+                                      ),
                                     );
                                   }
                                 } catch (e) {
                                   ScaffoldMessenger.of(context).showSnackBar(
                                     SnackBar(
-                                        content: Text(
-                                            'فشل تحديث السعر. حاول مرة أخرى.')),
+                                      elevation: 0,
+                                      behavior: SnackBarBehavior.floating,
+                                      backgroundColor: Colors.transparent,
+                                      content: AwesomeSnackbarContent(
+                                        title: 'خطأ',
+                                        message:
+                                            'فشل تحديث السعر. حاول مرة أخرى.',
+                                        contentType: ContentType.failure,
+                                      ),
+                                    ),
                                   );
                                 }
                               }
@@ -614,14 +673,30 @@ class MyProductsScreen extends HookConsumerWidget {
 
                                     ScaffoldMessenger.of(context).showSnackBar(
                                       SnackBar(
-                                          content: Text('تم حذف المنتج بنجاح')),
+                                        elevation: 0,
+                                        behavior: SnackBarBehavior.floating,
+                                        backgroundColor: Colors.transparent,
+                                        content: AwesomeSnackbarContent(
+                                          title: 'نجاح',
+                                          message: 'تم حذف المنتج بنجاح',
+                                          contentType: ContentType.success,
+                                        ),
+                                      ),
                                     );
                                   }
                                 } catch (e) {
                                   ScaffoldMessenger.of(context).showSnackBar(
                                     SnackBar(
-                                        content: Text(
-                                            'فشل حذف المنتج. حاول مرة أخرى.')),
+                                      elevation: 0,
+                                      behavior: SnackBarBehavior.floating,
+                                      backgroundColor: Colors.transparent,
+                                      content: AwesomeSnackbarContent(
+                                        title: 'خطأ',
+                                        message:
+                                            'فشل حذف المنتج. حاول مرة أخرى.',
+                                        contentType: ContentType.failure,
+                                      ),
+                                    ),
                                   );
                                 }
                               }
