@@ -240,3 +240,90 @@ final myProductsProvider = StreamProvider<List<ProductModel>>((ref) {
     return myFinalProducts;
   });
 });
+
+// --- Provider "أدويتي" مع التخزين المؤقت ---
+final cachedMyProductsProvider = StreamProvider<List<ProductModel>>((ref) {
+  final userId = ref.watch(authServiceProvider).currentUser?.uid;
+  if (userId == null) {
+    return Stream.value([]);
+  }
+
+  final firestore = FirebaseFirestore.instance;
+
+  // 1. الاستماع لقائمة منتجات الموزع (التي تحتوي على الأسعار والأحجام)
+  final distributorProductsStream = firestore
+      .collection('distributorProducts')
+      .where('distributorId', isEqualTo: userId)
+      .snapshots();
+
+  // Initialize cache
+  List<ProductModel>? cachedProducts;
+
+  // 2. تحويل قائمة الروابط هذه إلى قائمة منتجات كاملة بالتفاصيل
+  return distributorProductsStream.asyncMap((distributorSnapshot) async {
+    if (distributorSnapshot.docs.isEmpty) {
+      cachedProducts = [];
+      return cachedProducts!;
+    }
+
+    // استخراج البيانات من قائمة الموزع بأمان
+    final productLinks = distributorSnapshot.docs
+        .map((doc) => doc.data())
+        .where((data) =>
+            data['productId'] != null &&
+            data['price'] != null &&
+            data['package'] != null)
+        .toList();
+
+    if (productLinks.isEmpty) {
+      cachedProducts = [];
+      return cachedProducts!;
+    }
+
+    final productIds = productLinks
+        .map((link) => link['productId'] as String)
+        .toSet()
+        .toList();
+
+    // 3. جلب تفاصيل هذه المنتجات من المجموعة الرئيسية في دفعات
+    final List<QueryDocumentSnapshot<Map<String, dynamic>>> allProductDocs = [];
+    for (var i = 0; i < productIds.length; i += 30) {
+      final sublist = productIds.sublist(
+          i, i + 30 > productIds.length ? productIds.length : i + 30);
+      if (sublist.isNotEmpty) {
+        final productDocsSnapshot = await firestore
+            .collection('products')
+            .where(FieldPath.documentId, whereIn: sublist)
+            .get();
+        allProductDocs.addAll(productDocsSnapshot.docs);
+      }
+    }
+
+    // تحويل تفاصيل المنتجات إلى خريطة ليسهل الوصول إليها
+    final productsMap = {
+      for (var doc in allProductDocs) doc.id: ProductModel.fromFirestore(doc)
+    };
+
+    // 4. دمج البيانات النهائية (تفاصيل المنتج + سعر وحجم الموزع المحدد)
+    final myFinalProducts = productLinks
+        .map((link) {
+          final productDetails = productsMap[link['productId']];
+
+          if (productDetails != null) {
+            // نأخذ تفاصيل المنتج الأصلية ونقوم بتحديث السعر وحجم العبوة المختار
+            return productDetails.copyWith(
+              price: (link['price'] as num).toDouble(),
+              selectedPackage: link['package'] as String,
+              distributorId: link['distributorName'] as String,
+            );
+          }
+          return null;
+        })
+        .whereType<ProductModel>()
+        .toList(); // تجاهل أي نتائج فارغة
+
+    // Update cache
+    cachedProducts = myFinalProducts;
+    return cachedProducts!;
+  });
+});

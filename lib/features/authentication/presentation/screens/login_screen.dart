@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../../widgets/shimmer_loader.dart';
 import '../../services/auth_service.dart';
+import 'package:awesome_snackbar_content/awesome_snackbar_content.dart';
 
 class LoginScreen extends ConsumerStatefulWidget {
   const LoginScreen({super.key});
@@ -59,10 +60,21 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
       final authService = ref.read(authServiceProvider);
       final user = await authService.signInWithGoogle();
       if (!mounted) return;
+
       if (user == null) {
+        await authService.signOut();
         _showError('loginCancelled'.tr());
+      } else {
+        // ✅ تسجيل الدخول نجح → روح للصفحة الرئيسية
+        Navigator.pushReplacementNamed(context, '/home');
       }
     } catch (e) {
+      try {
+        final authService = ref.read(authServiceProvider);
+        await authService.signOut();
+      } catch (signOutError) {
+        print('Error clearing auth state after error: $signOutError');
+      }
       if (mounted) _showError('unexpectedError'.tr());
     } finally {
       if (mounted) setState(() => _isLoading = false);
@@ -70,21 +82,17 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
   }
 
   void _showError(String message) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Row(
-          children: [
-            Icon(Icons.error_outline, color: Colors.white),
-            const SizedBox(width: 8),
-            Expanded(child: Text(message)),
-          ],
-        ),
-        backgroundColor: Theme.of(context).colorScheme.error,
-        behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-        margin: const EdgeInsets.all(16),
+    final snackBar = SnackBar(
+      elevation: 0,
+      behavior: SnackBarBehavior.floating,
+      backgroundColor: Colors.transparent,
+      content: AwesomeSnackbarContent(
+        title: 'خطأ',
+        message: message,
+        contentType: ContentType.failure,
       ),
     );
+    ScaffoldMessenger.of(context).showSnackBar(snackBar);
   }
 
   @override
@@ -93,36 +101,24 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
     final textTheme = Theme.of(context).textTheme;
     final colorScheme = Theme.of(context).colorScheme;
 
-    // === إضافة breakpoints للشاشات المختلفة ===
     bool isSmallScreen = size.width < 600;
     bool isTablet = size.width >= 600 && size.width < 1024;
     bool isDesktop = size.width >= 1024;
 
-    // === تحديد أبعاد متكيفة حسب نوع الشاشة ===
     double logoHeight = isSmallScreen
-        ? size.height * 0.5 // 30% للشاشات الصغيرة
+        ? size.height * 0.5
         : isTablet
-            ? size.height * 0.6 // 40% للأجهزة اللوحية
-            : size.height * 0.6; // 50% للشاشات الكبيرة
+            ? size.height * 0.6
+            : size.height * 0.6;
 
-    double horizontalPadding = isSmallScreen
-        ? 20.0
-        : size.width * 0.1; // 10% من عرض الشاشة للشاشات الكبيرة
+    double horizontalPadding = isSmallScreen ? 20.0 : size.width * 0.1;
 
     return Scaffold(
       body: Container(
         height: size.height,
         width: size.width,
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            colors: [
-              const Color.fromARGB(255, 77, 190, 196),
-              const Color.fromARGB(255, 8, 119, 136),
-            ],
-            stops: const [0.0, 1.0],
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-          ),
+        decoration: const BoxDecoration(
+          color: Color.fromARGB(255, 8, 119, 136),
         ),
         child: SafeArea(
           child: SingleChildScrollView(
@@ -134,10 +130,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    // === مسافة علوية نسبية ===
                     SizedBox(height: size.height * 0.02),
-
-                    // === شعار التطبيق مع ارتفاع متكيف ===
                     FadeTransition(
                       opacity: _fadeAnimation,
                       child: SlideTransition(
@@ -145,26 +138,20 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
                         child: Container(
                           constraints: BoxConstraints(
                             maxHeight: logoHeight,
-                            maxWidth: isDesktop
-                                ? 500
-                                : double.infinity, // حد أقصى للشاشات الكبيرة
+                            maxWidth: isDesktop ? 500 : double.infinity,
                           ),
                           child: ClipRect(
                             child: Image.asset(
                               'assets/main_logo.png',
                               fit: BoxFit.contain,
                               width: double.infinity,
-                              height: logoHeight, // ارتفاع متكيف
+                              height: logoHeight,
                             ),
                           ),
                         ),
                       ),
                     ),
-
-                    // === مسافة نسبية ===
                     SizedBox(height: size.height * 0.07),
-
-                    // === زر تسجيل الدخول المحسن ===
                     FadeTransition(
                       opacity: _fadeAnimation,
                       child: SlideTransition(
@@ -181,11 +168,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
                             : _buildGoogleSignInButton(isSmallScreen),
                       ),
                     ),
-
-                    // === مسافة نسبية ===
                     SizedBox(height: size.height * 0.05),
-
-                    // === معلومات إضافية ===
                     Container(
                       padding: const EdgeInsets.symmetric(
                           horizontal: 16, vertical: 8),
@@ -200,24 +183,22 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
                       child: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          Icon(
+                          const Icon(
                             Icons.people_outline,
                             size: 16,
-                            color: colorScheme.surfaceDim,
+                            color: Colors.white,
                           ),
                           const SizedBox(width: 8),
                           Text(
                             'secureLogin'.tr(),
                             style: textTheme.bodySmall?.copyWith(
-                              color: colorScheme.surface,
+                              color: Colors.white,
                               fontWeight: FontWeight.w500,
                             ),
                           ),
                         ],
                       ),
                     ),
-
-                    // === مسافة سفلية نسبية ===
                     SizedBox(height: size.height * 0.02),
                   ],
                 ),
@@ -231,14 +212,19 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
 
   Widget _buildLoadingWidget() {
     final colorScheme = Theme.of(context).colorScheme;
+    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
 
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.95),
+        color: isDarkMode
+            ? colorScheme.surface.withOpacity(0.2)
+            : Colors.white.withOpacity(0.95),
         borderRadius: BorderRadius.circular(20),
         border: Border.all(
-          color: Colors.white.withOpacity(0.4),
+          color: isDarkMode
+              ? colorScheme.onSurface.withOpacity(0.2)
+              : Colors.white.withOpacity(0.4),
           width: 1,
         ),
         boxShadow: [
@@ -259,10 +245,16 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          const ShimmerLoader(
+          ShimmerLoader(
             width: 24,
             height: 24,
             isCircular: true,
+            baseColor: isDarkMode
+                ? colorScheme.onSurface.withOpacity(0.3)
+                : Colors.grey[300]!,
+            highlightColor: isDarkMode
+                ? colorScheme.onSurface.withOpacity(0.1)
+                : Colors.grey[100]!,
           ),
           const SizedBox(height: 12),
           Text(
@@ -270,7 +262,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
             style: TextStyle(
               fontSize: 16,
               fontWeight: FontWeight.w500,
-              color: colorScheme.primary,
+              color: isDarkMode ? colorScheme.onSurface : colorScheme.primary,
             ),
           ),
         ],
@@ -279,9 +271,6 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
   }
 
   Widget _buildGoogleSignInButton(bool isSmallScreen) {
-    // ignore: unused_local_variable
-    final colorScheme = Theme.of(context).colorScheme;
-
     return Container(
       width: double.infinity,
       constraints: BoxConstraints(
@@ -299,7 +288,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
         ),
         label: Text(
           'signInWithGoogle'.tr(),
-          style: TextStyle(
+          style: const TextStyle(
             fontSize: 16,
             fontWeight: FontWeight.w500,
             color: Colors.black87,
@@ -318,7 +307,6 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
               width: 1,
             ),
           ),
-          iconColor: null, // للحفاظ على ألوان Google الأصلية
         ),
       ),
     );

@@ -6,9 +6,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
 import '../../../../../widgets/shimmer_loader.dart';
 import '../../application/document_upload_controller.dart';
+import '../../domain/user_role.dart';
 import 'profile_completion_screen.dart';
-
-enum UserRole { doctor, distributor }
+import 'package:awesome_snackbar_content/awesome_snackbar_content.dart';
 
 class DocumentUploadScreen extends ConsumerStatefulWidget {
   final UserRole role;
@@ -26,7 +26,16 @@ class _DocumentUploadScreenState extends ConsumerState<DocumentUploadScreen> {
     final selectedImage = ref.read(documentUploadControllerProvider);
     if (selectedImage == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('pleaseSelectImageFirst'.tr())),
+        SnackBar(
+          elevation: 0,
+          behavior: SnackBarBehavior.floating,
+          backgroundColor: Colors.transparent,
+          content: AwesomeSnackbarContent(
+            title: 'تنبيه',
+            message: 'pleaseSelectImageFirst'.tr(),
+            contentType: ContentType.warning,
+          ),
+        ),
       );
       return;
     }
@@ -45,14 +54,22 @@ class _DocumentUploadScreenState extends ConsumerState<DocumentUploadScreen> {
         MaterialPageRoute(
           builder: (context) => ProfileCompletionScreen(
             documentUrl: downloadUrl,
-            selectedRole:
-                widget.role == UserRole.doctor ? 'doctor' : 'distributor',
+            selectedRole: widget.role.asString,
           ),
         ),
       );
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('imageUploadFailed'.tr())),
+        SnackBar(
+          elevation: 0,
+          behavior: SnackBarBehavior.floating,
+          backgroundColor: Colors.transparent,
+          content: AwesomeSnackbarContent(
+            title: 'خطأ',
+            message: 'imageUploadFailed'.tr(),
+            contentType: ContentType.failure,
+          ),
+        ),
       );
     }
   }

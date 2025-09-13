@@ -9,6 +9,7 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:fieldawy_store/widgets/shimmer_loader.dart';
 import 'package:fieldawy_store/widgets/custom_product_dialog.dart';
 import 'dart:ui' as ui;
+import 'package:awesome_snackbar_content/awesome_snackbar_content.dart';
 
 class AddFromCatalogScreen extends ConsumerStatefulWidget {
   const AddFromCatalogScreen({super.key});
@@ -331,11 +332,13 @@ class _AddFromCatalogScreenState extends ConsumerState<AddFromCatalogScreen> {
                     if (success && context.mounted) {
                       ScaffoldMessenger.of(context).showSnackBar(
                         SnackBar(
-                          content: const Text('تم حفظ المنتجات بنجاح'),
-                          backgroundColor: Colors.green.shade600,
+                          elevation: 0,
                           behavior: SnackBarBehavior.floating,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(10),
+                          backgroundColor: Colors.transparent,
+                          content: AwesomeSnackbarContent(
+                            title: 'نجاح',
+                            message: 'تم حفظ المنتجات بنجاح',
+                            contentType: ContentType.success,
                           ),
                         ),
                       );
@@ -343,13 +346,14 @@ class _AddFromCatalogScreenState extends ConsumerState<AddFromCatalogScreen> {
                     } else if (context.mounted) {
                       ScaffoldMessenger.of(context).showSnackBar(
                         SnackBar(
-                          content: const Text(
-                            'حدث خطأ أثناء حفظ المنتجات',
-                          ),
-                          backgroundColor: Colors.orange.shade600,
+                          elevation: 0,
                           behavior: SnackBarBehavior.floating,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(10),
+                          backgroundColor: Colors.transparent,
+                          content: AwesomeSnackbarContent(
+                            title: 'تنبيه',
+                            message:
+                                'حدث خطأ أثناء حفظ المنتجات',
+                            contentType: ContentType.warning,
                           ),
                         ),
                       );

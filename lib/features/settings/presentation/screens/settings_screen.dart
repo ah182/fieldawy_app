@@ -4,6 +4,7 @@ import 'package:fieldawy_store/core/theme/app_theme.dart';
 import 'package:fieldawy_store/features/home/application/user_data_provider.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:awesome_dialog/awesome_dialog.dart';
 
 import 'package:fieldawy_store/widgets/main_scaffold.dart';
 
@@ -65,33 +66,22 @@ class SettingsScreen extends ConsumerWidget {
                     trailing: const Icon(Icons.arrow_forward_ios,
                         size: 16, color: Colors.grey),
                     onTap: () {
-                      showDialog(
+                      AwesomeDialog(
                         context: context,
-                        builder: (dialogContext) => AlertDialog(
-                          title: Text('chooseYourLanguage'.tr()),
-                          content: Column(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              ListTile(
-                                title: const Text('العربية'),
-                                onTap: () async {
-                                  await dialogContext
-                                      .setLocale(const Locale('ar'));
-                                  Navigator.of(dialogContext).pop();
-                                },
-                              ),
-                              ListTile(
-                                title: const Text('English'),
-                                onTap: () async {
-                                  await dialogContext
-                                      .setLocale(const Locale('en'));
-                                  Navigator.of(dialogContext).pop();
-                                },
-                              ),
-                            ],
-                          ),
-                        ),
-                      );
+                        dialogType: DialogType.question,
+                        animType: AnimType.scale,
+                        title: 'languageChangeConfirmationTitle'.tr(),
+                        desc: 'languageChangeConfirmationMessage'.tr(namedArgs: {'language': context.locale.languageCode == 'ar' ? 'English' : 'العربية'}),
+                        btnCancelOnPress: () {},
+                        btnOkOnPress: () async {
+                          // Change language directly after confirmation
+                          if (context.locale.languageCode == 'ar') {
+                            await context.setLocale(const Locale('en'));
+                          } else {
+                            await context.setLocale(const Locale('ar'));
+                          }
+                        },
+                      ).show();
                     },
                   ),
                 ),

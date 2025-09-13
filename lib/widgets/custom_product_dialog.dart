@@ -4,6 +4,7 @@ import 'package:fieldawy_store/widgets/shimmer_loader.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../features/products/domain/product_model.dart';
 import 'dart:ui' as ui;
+import 'package:awesome_snackbar_content/awesome_snackbar_content.dart';
 
 class CustomProductDialog extends StatelessWidget {
   const CustomProductDialog({super.key, required this.product});
@@ -307,7 +308,16 @@ class CustomProductDialog extends StatelessWidget {
                               } catch (e) {
                                 if (context.mounted) {
                                   ScaffoldMessenger.of(context).showSnackBar(
-                                    SnackBar(content: Text('تعذر فتح الرابط')),
+                                    SnackBar(
+                                      elevation: 0,
+                                      behavior: SnackBarBehavior.floating,
+                                      backgroundColor: Colors.transparent,
+                                      content: AwesomeSnackbarContent(
+                                        title: 'تنبيه',
+                                        message: 'تعذر فتح الرابط',
+                                        contentType: ContentType.warning,
+                                      ),
+                                    ),
                                   );
                                 }
                               }

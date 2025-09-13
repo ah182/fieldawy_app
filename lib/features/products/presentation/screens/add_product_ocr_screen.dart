@@ -14,6 +14,7 @@ import 'package:path/path.dart' as p;
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:fieldawy_store/widgets/shimmer_loader.dart';
+import 'package:awesome_snackbar_content/awesome_snackbar_content.dart';
 
 class AddProductOcrScreen extends ConsumerStatefulWidget {
   const AddProductOcrScreen({super.key});
@@ -151,7 +152,16 @@ class _AddProductOcrScreenState extends ConsumerState<AddProductOcrScreen> {
       }
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Failed to process image: $e')),
+        SnackBar(
+          elevation: 0,
+          behavior: SnackBarBehavior.floating,
+          backgroundColor: Colors.transparent,
+          content: AwesomeSnackbarContent(
+            title: 'خطأ',
+            message: 'Failed to process image: $e',
+            contentType: ContentType.failure,
+          ),
+        ),
       );
     } finally {
       setState(() {
@@ -248,18 +258,28 @@ class _AddProductOcrScreenState extends ConsumerState<AddProductOcrScreen> {
 
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: const Text('Product added successfully!'),
+          elevation: 0,
           behavior: SnackBarBehavior.floating,
-          backgroundColor: Colors.green.shade600,
+          backgroundColor: Colors.transparent,
+          content: AwesomeSnackbarContent(
+            title: 'نجاح',
+            message: 'Product added successfully!',
+            contentType: ContentType.success,
+          ),
         ),
       );
       Navigator.of(context).pop();
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Failed to save product: $e'),
+          elevation: 0,
           behavior: SnackBarBehavior.floating,
-          backgroundColor: Theme.of(context).colorScheme.error,
+          backgroundColor: Colors.transparent,
+          content: AwesomeSnackbarContent(
+            title: 'خطأ',
+            message: 'Failed to save product: $e',
+            contentType: ContentType.failure,
+          ),
         ),
       );
     } finally {

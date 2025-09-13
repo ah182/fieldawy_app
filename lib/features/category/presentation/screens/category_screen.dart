@@ -11,7 +11,7 @@ class CategoryScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final userRole = ref.watch(userDataProvider).asData?.value?.role ?? '';
-    final selectedIndex = userRole == 'distributor' ? 1 : 1;
+    final selectedIndex = (userRole == 'distributor' || userRole == 'company') ? 1 : 1;
 
     final sliverAppBar = SliverAppBar(
       title: Text('categoryScreen'.tr()),
