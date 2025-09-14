@@ -31,8 +31,8 @@
     "logoutConfirmationMessage": "Are you sure you want to logout?",
     "languageChangeConfirmationTitle": "Language Change Confirmation",
     "languageChangeConfirmationMessage": "Are you sure you want to change the language to {language}?",
-    "languageChangeConfirmationTitle": "Language Change Confirmation",
-    "languageChangeConfirmationMessage": "Are you sure you want to change the language to {language}?",
+    
+   
     "accountUnderReview": "Account Under Review",
     "pendingMessage": "Thank you. Your documents have been successfully received and will be reviewed by the admin as soon as possible.",
     "contactSupport": "Contact Support",
