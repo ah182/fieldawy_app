@@ -57,6 +57,7 @@ class HomeScreen extends HookConsumerWidget {
   void _showProductDetailDialog(BuildContext context, WidgetRef ref, ProductModel product) {
     showGeneralDialog(
       context: context,
+      useRootNavigator: true,
       barrierDismissible: true,
       barrierLabel: MaterialLocalizations.of(context).modalBarrierDismissLabel,
       barrierColor: Colors.black54,
@@ -289,7 +290,8 @@ class HomeScreen extends HookConsumerWidget {
                       const Spacer(),
                       Consumer(
                         builder: (context, ref, child) {
-                          final isFavorite = ref.watch(favoritesProvider.notifier).isFavorite(product);
+                          final favoriteIds = ref.watch(favoritesProvider);
+                          final isFavorite = favoriteIds.contains('${product.id}_${product.distributorId}_${product.selectedPackage}');
                           return Container(
                             decoration: BoxDecoration(
                               color: containerColor,
