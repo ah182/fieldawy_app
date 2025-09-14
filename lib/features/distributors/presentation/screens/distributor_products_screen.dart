@@ -1,25 +1,22 @@
 // lib/features/distributors/presentation/screens/distributor_products_screen.dart
-// ignore_for_file: unused_import, unused_element
 
-import "dart:math";
-import "dart:ui" as ui;
-import "package:cached_network_image/cached_network_image.dart";
-import "package:cloud_firestore/cloud_firestore.dart";
-import "package:cloud_firestore/cloud_firestore.dart" as firestore;
-import "package:easy_localization/easy_localization.dart";
-import "package:fieldawy_store/features/distributors/presentation/screens/distributors_screen.dart";
-import "package:flutter/material.dart";
-import "package:flutter_hooks/flutter_hooks.dart";
-import "package:font_awesome_flutter/font_awesome_flutter.dart";
-import "package:hooks_riverpod/hooks_riverpod.dart";
-// 👇 غيّر الاستيراد المسبِّب للتعارض إلى اسم مستعار
-import "package:path/path.dart" as p;
+import 'dart:ui' as ui;
+import 'package:cached_network_image/cached_network_image.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:cloud_firestore/cloud_firestore.dart' as firestore;
+import 'package:easy_localization/easy_localization.dart';
+import 'package:fieldawy_store/features/distributors/presentation/screens/distributors_screen.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter_hooks/flutter_hooks.dart';
+import 'package:hooks_riverpod/hooks_riverpod.dart';
 
-import "package:url_launcher/url_launcher.dart";
-import "package:fieldawy_store/widgets/shimmer_loader.dart";
+import 'package:url_launcher/url_launcher.dart';
+import 'package:fieldawy_store/widgets/shimmer_loader.dart';
 
 import '../../../products/domain/product_model.dart';
 import 'package:awesome_snackbar_content/awesome_snackbar_content.dart';
+import 'package:fieldawy_store/features/products/application/favorites_provider.dart';
+import 'package:fieldawy_store/main.dart';
 
 /* -------------------------------------------------------------------------- */
 /*                               DATA PROVIDERS                               */
@@ -142,8 +139,8 @@ class DistributorProductsScreen extends HookConsumerWidget {
   }
 
   // دالة لإظهار ديالوج تفاصيل المنتج مع أنيميشن احترافي
-  // دالة لإظهار ديالوج تفاصيل المنتج مع أنيميشن احترافي
-  void _showProductDetailDialog(BuildContext context, ProductModel product) {
+  void _showProductDetailDialog(
+      BuildContext context, WidgetRef ref, ProductModel product) {
     showGeneralDialog(
       context: context,
       barrierDismissible: true,
@@ -154,7 +151,7 @@ class DistributorProductsScreen extends HookConsumerWidget {
         return Center(
           child: Material(
             type: MaterialType.transparency,
-            child: _buildProductDetailDialog(context, product),
+            child: _buildProductDetailDialog(context, ref, product),
           ),
         );
       },
@@ -175,7 +172,8 @@ class DistributorProductsScreen extends HookConsumerWidget {
 
 // بناء ديالوج تفاصيل المنتج - مُصحح
   // بناء ديالوج تفاصيل المنتج - مع دعم الثيم الداكن والفاتح
-  Widget _buildProductDetailDialog(BuildContext context, ProductModel product) {
+  Widget _buildProductDetailDialog(
+      BuildContext context, WidgetRef ref, ProductModel product) {
     final size = MediaQuery.of(context).size;
     final isSmallScreen = size.width < 600;
     final theme = Theme.of(context);
@@ -191,7 +189,7 @@ class DistributorProductsScreen extends HookConsumerWidget {
         final parts = package.split(' ');
         if (parts.length >= 3) {
           final number = parts.firstWhere(
-              (part) => RegExp(r'^\\d+').hasMatch(part),
+              (part) => RegExp(r'^\d+').hasMatch(part),
               orElse: () => '');
           final unit = parts.firstWhere(
               (part) => part.toLowerCase().contains(' ml'),
@@ -210,7 +208,7 @@ class DistributorProductsScreen extends HookConsumerWidget {
 
     // ألوان حسب الثيم
     final backgroundGradient = isDark
-        ? LinearGradient(
+        ? const LinearGradient(
             colors: [
               Color(0xFF1E1E2E), // داكن بنفسجي
               Color(0xFF2A2A3A), // داكن رمادي
@@ -218,7 +216,7 @@ class DistributorProductsScreen extends HookConsumerWidget {
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
           )
-        : LinearGradient(
+        : const LinearGradient(
             colors: [
               Color(0xFFE3F2FD), // أزرق فاتح (التصميم الأصلي)
               Color(0xFFF8FDFF), // أبيض مع لمسة زرقاء
@@ -228,21 +226,21 @@ class DistributorProductsScreen extends HookConsumerWidget {
           );
 
     final containerColor = isDark
-        ? Colors.grey.shade800.withOpacity(0.5)
-        : Colors.white.withOpacity(0.8);
+        ? Colors.grey.shade800.withAlpha(128)
+        : Colors.white.withAlpha(204);
     final iconColor = isDark ? Colors.white70 : theme.colorScheme.primary;
     final priceColor =
         isDark ? Colors.lightGreenAccent.shade200 : Colors.green.shade700;
     final favoriteColor =
         isDark ? Colors.redAccent.shade100 : Colors.red.shade400;
     final packageBgColor = isDark
-        ? const Color.fromARGB(255, 239, 241, 251).withOpacity(0.1)
-        : Colors.blue.shade50.withOpacity(0.8);
+        ? const Color.fromARGB(255, 239, 241, 251).withAlpha(26)
+        : Colors.blue.shade50.withAlpha(204);
     final packageBorderColor =
         isDark ? Colors.grey.shade600 : Colors.blue.shade200;
     final imageBgColor = isDark
-        ? const Color.fromARGB(255, 21, 15, 15).withOpacity(0.3)
-        : Colors.white.withOpacity(0.7);
+        ? const Color.fromARGB(255, 21, 15, 15).withAlpha(77)
+        : Colors.white.withAlpha(179);
 
     return Dialog(
       backgroundColor: Colors.transparent,
@@ -256,8 +254,8 @@ class DistributorProductsScreen extends HookConsumerWidget {
           boxShadow: [
             BoxShadow(
               color: isDark
-                  ? Colors.black.withOpacity(0.3)
-                  : Colors.black.withOpacity(0.1),
+                  ? Colors.black.withAlpha(77)
+                  : Colors.black.withAlpha(26),
               blurRadius: 20,
               spreadRadius: 5,
               offset: const Offset(0, 10),
@@ -265,7 +263,7 @@ class DistributorProductsScreen extends HookConsumerWidget {
           ],
           border: Border.all(
             color: isDark
-                ? Colors.grey.shade600.withOpacity(0.3)
+                ? Colors.grey.shade600.withAlpha(77)
                 : Colors.grey.shade200,
             width: 1,
           ),
@@ -301,7 +299,7 @@ class DistributorProductsScreen extends HookConsumerWidget {
                           borderRadius: BorderRadius.circular(20),
                           boxShadow: [
                             BoxShadow(
-                              color: theme.colorScheme.primary.withOpacity(0.3),
+                              color: theme.colorScheme.primary.withAlpha(77),
                               blurRadius: 8,
                               offset: const Offset(0, 3),
                             ),
@@ -326,7 +324,7 @@ class DistributorProductsScreen extends HookConsumerWidget {
                     Text(
                       product.company!,
                       style: theme.textTheme.bodyMedium?.copyWith(
-                        color: theme.colorScheme.onSurface.withOpacity(0.7),
+                        color: theme.colorScheme.onSurface.withAlpha(179),
                         fontWeight: FontWeight.w500,
                       ),
                     ),
@@ -351,7 +349,7 @@ class DistributorProductsScreen extends HookConsumerWidget {
                     Text(
                       product.activePrinciple!,
                       style: theme.textTheme.bodyMedium?.copyWith(
-                        color: theme.colorScheme.onSurface.withOpacity(0.6),
+                        color: theme.colorScheme.onSurface.withAlpha(153),
                       ),
                     ),
 
@@ -363,7 +361,7 @@ class DistributorProductsScreen extends HookConsumerWidget {
                       Directionality(
                         textDirection: ui.TextDirection.ltr,
                         child: Text(
-                          '${product.price?.toStringAsFixed(0) ?? '0'} ${'EGP'.tr()}',
+                          '${product.price?.toStringAsFixed(0) ?? 0} ${'EGP'.tr()}',
                           style: TextStyle(
                             fontSize: 22,
                             fontWeight: FontWeight.bold,
@@ -372,32 +370,50 @@ class DistributorProductsScreen extends HookConsumerWidget {
                         ),
                       ),
                       const Spacer(),
-                      Container(
-                        decoration: BoxDecoration(
-                          color: containerColor,
-                          shape: BoxShape.circle,
-                        ),
-                        child: IconButton(
-                          icon: Icon(
-                            Icons.favorite_border,
-                            color: favoriteColor,
-                          ),
-                          onPressed: () {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(
-                                elevation: 0,
-                                behavior: SnackBarBehavior.floating,
-                                backgroundColor: Colors.transparent,
-                                content: AwesomeSnackbarContent(
-                                  title: 'تم بنجاح',
-                                  message:
-                                      'تمت إضافة \'${product.name}\' إلى قائمة المفضلة الخاصة بك!',
-                                  contentType: ContentType.success,
-                                ),
+                      Consumer(
+                        builder: (context, ref, child) {
+                          final favoriteIds = ref.watch(favoritesProvider);
+                          final isFavorite = favoriteIds.contains(
+                              '${product.id}_${product.distributorId}_${product.selectedPackage}');
+                          return Container(
+                            decoration: BoxDecoration(
+                              color: containerColor,
+                              shape: BoxShape.circle,
+                            ),
+                            child: IconButton(
+                              icon: Icon(
+                                isFavorite
+                                    ? Icons.favorite
+                                    : Icons.favorite_border,
+                                color: isFavorite ? Colors.red : favoriteColor,
                               ),
-                            );
-                          },
-                        ),
+                              onPressed: () {
+                                ref
+                                    .read(favoritesProvider.notifier)
+                                    .toggleFavorite(product);
+                                scaffoldMessengerKey.currentState
+                                    ?.showSnackBar(
+                                  SnackBar(
+                                    elevation: 0,
+                                    behavior: SnackBarBehavior.floating,
+                                    backgroundColor: Colors.transparent,
+                                    content: AwesomeSnackbarContent(
+                                      title: isFavorite ? 'تم الحذف' : 'نجاح',
+                                      message: isFavorite
+                                          ? 'تمت إزالة ${product.name} من المفضلة'
+                                          : 'addedToFavorites'
+                                              .tr(args: [product.name]),
+                                      contentType: isFavorite
+                                          ? ContentType.failure
+                                          : ContentType.success,
+                                    ),
+                                    duration: const Duration(seconds: 1),
+                                  ),
+                                );
+                              },
+                            ),
+                          );
+                        },
                       ),
                     ],
                   ),
@@ -418,13 +434,13 @@ class DistributorProductsScreen extends HookConsumerWidget {
                         imageUrl: product.imageUrl,
                         fit: BoxFit.contain,
                         placeholder: (context, url) => const Center(
-                              child: ImageLoadingIndicator(
-                            size: 50,
-                          )),
+                            child: ImageLoadingIndicator(
+                          size: 50,
+                        )),
                         errorWidget: (context, url, error) => Icon(
                           Icons.broken_image_outlined,
                           size: 60,
-                          color: theme.colorScheme.onSurface.withOpacity(0.4),
+                          color: theme.colorScheme.onSurface.withAlpha(102),
                         ),
                       ),
                     ),
@@ -506,16 +522,15 @@ class DistributorProductsScreen extends HookConsumerWidget {
                       decoration: BoxDecoration(
                         gradient: LinearGradient(
                           colors: [
-                            theme.colorScheme.primaryContainer.withOpacity(0.3),
-                            theme.colorScheme.secondaryContainer
-                                .withOpacity(0.2),
+                            theme.colorScheme.primaryContainer.withAlpha(77),
+                            theme.colorScheme.secondaryContainer.withAlpha(51),
                           ],
                           begin: Alignment.topLeft,
                           end: Alignment.bottomRight,
                         ),
                         borderRadius: BorderRadius.circular(20),
                         border: Border.all(
-                          color: theme.colorScheme.primary.withOpacity(0.2),
+                          color: theme.colorScheme.primary.withAlpha(51),
                           width: 1,
                         ),
                       ),
@@ -548,6 +563,7 @@ class DistributorProductsScreen extends HookConsumerWidget {
                                       mode: LaunchMode.externalApplication);
                                 }
                               } catch (e) {
+                                if (!context.mounted) return;
                                 ScaffoldMessenger.of(context).showSnackBar(
                                   SnackBar(
                                     elevation: 0,
@@ -571,7 +587,7 @@ class DistributorProductsScreen extends HookConsumerWidget {
                                 boxShadow: [
                                   BoxShadow(
                                     color: theme.colorScheme.primary
-                                        .withOpacity(0.3),
+                                        .withAlpha(77),
                                     blurRadius: 8,
                                     offset: const Offset(0, 3),
                                   ),
@@ -627,8 +643,8 @@ class DistributorProductsScreen extends HookConsumerWidget {
           child: Column(
             children: [
               Padding(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+                padding: const EdgeInsets.symmetric(
+                    horizontal: 16.0, vertical: 8.0),
                 child: TextField(
                   controller: searchController,
                   onChanged: (value) {
@@ -640,7 +656,7 @@ class DistributorProductsScreen extends HookConsumerWidget {
                           color: Theme.of(context)
                               .colorScheme
                               .onSurface
-                              .withOpacity(0.6),
+                              .withAlpha(153),
                         ),
                     prefixIcon: Icon(
                       Icons.search,
@@ -659,14 +675,15 @@ class DistributorProductsScreen extends HookConsumerWidget {
                             color: Theme.of(context)
                                 .colorScheme
                                 .onSurface
-                                .withOpacity(0.5),
+                                .withAlpha(128),
                           ),
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(30.0),
                       borderSide: BorderSide.none,
                     ),
                     filled: true,
-                    fillColor: Theme.of(context).colorScheme.surfaceVariant,
+                    fillColor:
+                        Theme.of(context).colorScheme.surfaceContainerHighest,
                   ),
                 ),
               ),
@@ -686,8 +703,7 @@ class DistributorProductsScreen extends HookConsumerWidget {
                   Icon(
                     Icons.inventory_2_outlined,
                     size: 80,
-                    color:
-                        Theme.of(context).colorScheme.primary.withOpacity(0.5),
+                    color: Theme.of(context).colorScheme.primary.withAlpha(128),
                   ),
                   const SizedBox(height: 16),
                   Text(
@@ -696,7 +712,7 @@ class DistributorProductsScreen extends HookConsumerWidget {
                           color: Theme.of(context)
                               .colorScheme
                               .onSurface
-                              .withOpacity(0.7),
+                              .withAlpha(179),
                         ),
                   ),
                 ],
@@ -753,19 +769,19 @@ class DistributorProductsScreen extends HookConsumerWidget {
                       ? Theme.of(context)
                           .colorScheme
                           .primaryContainer
-                          .withOpacity(0.3)
+                          .withAlpha(77)
                       : Theme.of(context)
                           .colorScheme
                           .secondaryContainer
-                          .withOpacity(0.3),
+                          .withAlpha(77),
                   borderRadius: BorderRadius.circular(12),
                   border: Border.all(
                     color: searchQuery.value.isEmpty
-                        ? Theme.of(context).colorScheme.primary.withOpacity(0.2)
+                        ? Theme.of(context).colorScheme.primary.withAlpha(51)
                         : Theme.of(context)
                             .colorScheme
                             .secondary
-                            .withOpacity(0.2),
+                            .withAlpha(51),
                     width: 1,
                   ),
                 ),
@@ -808,11 +824,11 @@ class DistributorProductsScreen extends HookConsumerWidget {
                               color: Theme.of(context)
                                   .colorScheme
                                   .primary
-                                  .withOpacity(0.5),
+                                  .withAlpha(128),
                             ),
                             const SizedBox(height: 16),
                             Text(
-                              'لا توجد نتائج للبحث عن "${searchQuery.value}"',
+                              'لا توجد نتائج للبحث عن "${searchQuery.value}" ',
                               style: Theme.of(context)
                                   .textTheme
                                   .titleMedium
@@ -820,7 +836,7 @@ class DistributorProductsScreen extends HookConsumerWidget {
                                     color: Theme.of(context)
                                         .colorScheme
                                         .onSurface
-                                        .withOpacity(0.7),
+                                        .withAlpha(179),
                                   ),
                               textAlign: TextAlign.center,
                             ),
@@ -834,7 +850,7 @@ class DistributorProductsScreen extends HookConsumerWidget {
                                     color: Theme.of(context)
                                         .colorScheme
                                         .onSurface
-                                        .withOpacity(0.5),
+                                        .withAlpha(128),
                                   ),
                               textAlign: TextAlign.center,
                             ),
@@ -865,7 +881,7 @@ class DistributorProductsScreen extends HookConsumerWidget {
                           final product = filteredProducts[index];
 
                           return _buildProductCard(
-                              context, product, searchQuery.value);
+                              context, ref, product, searchQuery.value, distributor.displayName);
                         },
                       ),
               ),
@@ -911,17 +927,17 @@ class DistributorProductsScreen extends HookConsumerWidget {
   }
 
   Widget _buildProductCard(
-      BuildContext context, ProductModel product, String searchQuery) {
+      BuildContext context, WidgetRef ref, ProductModel product, String searchQuery, String distributorName) {
     return Card(
       clipBehavior: Clip.antiAlias,
       elevation: 3,
-      shadowColor: Theme.of(context).shadowColor.withOpacity(0.2),
+      shadowColor: Theme.of(context).shadowColor.withAlpha(51),
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(16),
       ),
       child: InkWell(
         onTap: () {
-          _showProductDetailDialog(context, product);
+          _showProductDetailDialog(context, ref, product);
         },
         borderRadius: BorderRadius.circular(16),
         child: Column(
@@ -936,8 +952,8 @@ class DistributorProductsScreen extends HookConsumerWidget {
                     decoration: BoxDecoration(
                       color: Theme.of(context)
                           .colorScheme
-                          .surfaceVariant
-                          .withOpacity(0.3),
+                          .surfaceContainerHighest
+                          .withAlpha(77),
                       borderRadius:
                           const BorderRadius.vertical(top: Radius.circular(16)),
                     ),
@@ -954,7 +970,7 @@ class DistributorProductsScreen extends HookConsumerWidget {
                           color: Theme.of(context)
                               .colorScheme
                               .onSurface
-                              .withOpacity(0.4),
+                              .withAlpha(102),
                         ),
                       ),
                     ),
@@ -966,36 +982,58 @@ class DistributorProductsScreen extends HookConsumerWidget {
                       width: 28,
                       height: 28,
                       decoration: BoxDecoration(
-                        color: Colors.white.withOpacity(0.9),
+                        color: Colors.white.withAlpha(230),
                         shape: BoxShape.circle,
                         boxShadow: [
                           BoxShadow(
-                            color: Colors.black.withOpacity(0.1),
+                            color: Colors.black.withAlpha(26),
                             blurRadius: 2,
                             offset: const Offset(0, 1),
                           ),
                         ],
                       ),
-                      child: IconButton(
-                        padding: EdgeInsets.zero,
-                        icon: const Icon(Icons.favorite_border),
-                        iconSize: 14,
-                        onPressed: () {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(
-                              elevation: 0,
-                              behavior: SnackBarBehavior.floating,
-                              backgroundColor: Colors.transparent,
-                              content: AwesomeSnackbarContent(
-                                title: 'تم بنجاح',
-                                message:
-                                    'تمت إضافة \'${product.name}\' إلى قائمة المفضلة الخاصة بك!',
-                                contentType: ContentType.success,
-                              ),
+                      child: Consumer(
+                        builder: (context, ref, child) {
+                          final favoriteIds = ref.watch(favoritesProvider);
+                          final isFavorite = favoriteIds.contains(
+                              '${product.id}_${product.distributorId}_${product.selectedPackage}');
+                          return IconButton(
+                            padding: EdgeInsets.zero,
+                            icon: Icon(
+                              isFavorite
+                                  ? Icons.favorite
+                                  : Icons.favorite_border,
+                              color: isFavorite
+                                  ? Colors.red
+                                  : Theme.of(context).colorScheme.error,
                             ),
+                            iconSize: 14,
+                            onPressed: () {
+                              ref
+                                  .read(favoritesProvider.notifier)
+                                  .toggleFavorite(product);
+                              scaffoldMessengerKey.currentState
+                                  ?.showSnackBar(
+                                SnackBar(
+                                  elevation: 0,
+                                  behavior: SnackBarBehavior.floating,
+                                  backgroundColor: Colors.transparent,
+                                  content: AwesomeSnackbarContent(
+                                    title: isFavorite ? 'تم الحذف' : 'نجاح',
+                                    message: isFavorite
+                                        ? 'تمت إزالة ${product.name} من المفضلة'
+                                        : 'addedToFavorites'
+                                            .tr(args: [product.name]),
+                                    contentType: isFavorite
+                                        ? ContentType.failure
+                                        : ContentType.success,
+                                  ),
+                                  duration: const Duration(seconds: 1),
+                                ),
+                              );
+                            },
                           );
                         },
-                        color: Theme.of(context).colorScheme.error,
                       ),
                     ),
                   ),
@@ -1045,16 +1083,18 @@ class DistributorProductsScreen extends HookConsumerWidget {
                         color: Theme.of(context)
                             .colorScheme
                             .primary
-                            .withOpacity(0.1),
+                            .withAlpha(26),
                         borderRadius: BorderRadius.circular(4),
                       ),
                       child: Text(
-                        '${product.price?.toStringAsFixed(0) ?? '0'} ${'LE'.tr()}',
-                        style:
-                            Theme.of(context).textTheme.labelMedium?.copyWith(
-                                  color: Theme.of(context).colorScheme.primary,
-                                  fontWeight: FontWeight.bold,
-                                ),
+                        '${product.price?.toStringAsFixed(0) ?? 0} ${'LE'.tr()}',
+                        style: Theme.of(context)
+                            .textTheme
+                            .labelMedium
+                            ?.copyWith(
+                              color: Theme.of(context).colorScheme.primary,
+                              fontWeight: FontWeight.bold,
+                            ),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                       ),
@@ -1068,12 +1108,12 @@ class DistributorProductsScreen extends HookConsumerWidget {
                           color: Theme.of(context)
                               .colorScheme
                               .onSurface
-                              .withOpacity(0.6),
+                              .withAlpha(153),
                         ),
                         const SizedBox(width: 2),
                         Expanded(
                           child: Text(
-                            product.distributorId ?? 'موزع غير معروف',
+                            distributorName,
                             style: Theme.of(context)
                                 .textTheme
                                 .labelSmall
@@ -1081,7 +1121,7 @@ class DistributorProductsScreen extends HookConsumerWidget {
                                   color: Theme.of(context)
                                       .colorScheme
                                       .onSurface
-                                      .withOpacity(0.7),
+                                      .withAlpha(179),
                                   fontSize: 9,
                                 ),
                             maxLines: 1,
