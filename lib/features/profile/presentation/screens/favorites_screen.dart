@@ -45,16 +45,18 @@ class FavoritesScreen extends HookConsumerWidget {
   void _showProductDetailDialog(BuildContext context, WidgetRef ref, ProductModel product) {
     showGeneralDialog(
       context: context,
-      useRootNavigator: true,
       barrierDismissible: true,
       barrierLabel: MaterialLocalizations.of(context).modalBarrierDismissLabel,
       barrierColor: Colors.black54,
       transitionDuration: const Duration(milliseconds: 400),
       pageBuilder: (context, animation1, animation2) {
-        return Center(
-          child: Material(
-            type: MaterialType.transparency,
-            child: _buildProductDetailDialog(context, ref, product),
+        return Scaffold(
+          backgroundColor: Colors.transparent,
+          body: Center(
+            child: Material(
+              type: MaterialType.transparency,
+              child: _buildProductDetailDialog(context, ref, product),
+            ),
           ),
         );
       },
