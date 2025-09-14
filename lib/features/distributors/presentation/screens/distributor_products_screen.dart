@@ -389,12 +389,11 @@ class DistributorProductsScreen extends HookConsumerWidget {
                                 behavior: SnackBarBehavior.floating,
                                 backgroundColor: Colors.transparent,
                                 content: AwesomeSnackbarContent(
-                                  title: 'نجاح',
-                                  message: 'addedToFavorites'
-                                      .tr(args: [product.name]),
+                                  title: 'تم بنجاح',
+                                  message:
+                                      'تمت إضافة \'${product.name}\' إلى قائمة المفضلة الخاصة بك!',
                                   contentType: ContentType.success,
                                 ),
-                                duration: const Duration(seconds: 1),
                               ),
                             );
                           },
@@ -589,8 +588,7 @@ class DistributorProductsScreen extends HookConsumerWidget {
                                   const SizedBox(width: 8),
                                   Text(
                                     'Vet Eye',
-                                    style:
-                                        theme.textTheme.titleMedium?.copyWith(
+                                    style: theme.textTheme.titleMedium?.copyWith(
                                       color: theme.colorScheme.onPrimary,
                                       fontWeight: FontWeight.bold,
                                       fontSize: 16,
@@ -622,10 +620,10 @@ class DistributorProductsScreen extends HookConsumerWidget {
 
     return Scaffold(
       appBar: AppBar(
-        title: Text('منتجات  ${distributor.displayName} '),
+        title: Text('منتجات ${distributor.displayName}'),
         elevation: 2,
         bottom: PreferredSize(
-          preferredSize: const Size.fromHeight(kToolbarHeight + 50.0),
+          preferredSize: const Size.fromHeight(kToolbarHeight + 15.0),
           child: Column(
             children: [
               Padding(
@@ -786,8 +784,8 @@ class DistributorProductsScreen extends HookConsumerWidget {
                     const SizedBox(width: 8),
                     Text(
                       searchQuery.value.isEmpty
-                          ? '    ${filteredProducts.length}    :  عدد المنتجات المتاحة    '
-                          : '   ${filteredProducts.length}   : عدد المنتجات المتاحة ${filteredProducts.length == 1 ? '' : (filteredProducts.length <= 10 ? '' : '')} ',
+                          ? '   ${filteredProducts.length}   :  عدد المنتجات المتاحة    '
+                          : '  ${filteredProducts.length}  : عدد المنتجات المتاحة ${filteredProducts.length == 1 ? '' : (filteredProducts.length <= 10 ? '' : '')}',
                       style: Theme.of(context).textTheme.bodySmall?.copyWith(
                             color: searchQuery.value.isEmpty
                                 ? Theme.of(context).colorScheme.primary
@@ -814,7 +812,7 @@ class DistributorProductsScreen extends HookConsumerWidget {
                             ),
                             const SizedBox(height: 16),
                             Text(
-                              'لا توجد نتائج للبحث عن "  ${searchQuery.value}  "',
+                              'لا توجد نتائج للبحث عن "${searchQuery.value}"',
                               style: Theme.of(context)
                                   .textTheme
                                   .titleMedium
@@ -985,10 +983,15 @@ class DistributorProductsScreen extends HookConsumerWidget {
                         onPressed: () {
                           ScaffoldMessenger.of(context).showSnackBar(
                             SnackBar(
-                              content:
-                                  Text('تمت إضافة   ${product.name}   للمفضلة'),
-                              duration: const Duration(seconds: 1),
+                              elevation: 0,
                               behavior: SnackBarBehavior.floating,
+                              backgroundColor: Colors.transparent,
+                              content: AwesomeSnackbarContent(
+                                title: 'تم بنجاح',
+                                message:
+                                    'تمت إضافة \'${product.name}\' إلى قائمة المفضلة الخاصة بك!',
+                                contentType: ContentType.success,
+                              ),
                             ),
                           );
                         },
@@ -1046,7 +1049,7 @@ class DistributorProductsScreen extends HookConsumerWidget {
                         borderRadius: BorderRadius.circular(4),
                       ),
                       child: Text(
-                        '  ${product.price?.toStringAsFixed(0) ?? '0'}     ${'LE'.tr()}  ',
+                        '${product.price?.toStringAsFixed(0) ?? '0'} ${'LE'.tr()}',
                         style:
                             Theme.of(context).textTheme.labelMedium?.copyWith(
                                   color: Theme.of(context).colorScheme.primary,
