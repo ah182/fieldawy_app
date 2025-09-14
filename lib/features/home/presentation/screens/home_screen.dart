@@ -660,13 +660,13 @@ class HomeScreen extends HookConsumerWidget {
         ),
       ],
       bottom: PreferredSize(
-        preferredSize: const Size.fromHeight(kToolbarHeight + 50.0),
+        preferredSize: const Size.fromHeight(kToolbarHeight + 15.0),
         child: Column(
           children: [
             // === شريط البحث المُحسن ===
             Padding(
               padding:
-                  const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+                  const EdgeInsets.symmetric(horizontal: 16.0, vertical: 2.0),
               child: Container(
                 decoration: BoxDecoration(
                   color: Theme.of(context).colorScheme.surface,
@@ -697,7 +697,7 @@ class HomeScreen extends HookConsumerWidget {
                     prefixIcon: Icon(
                       Icons.search,
                       color: Theme.of(context).colorScheme.primary,
-                      size: 20,
+                      size: 25,
                     ),
                     suffixIcon: searchQuery.value.isNotEmpty
                         ? IconButton(
@@ -709,12 +709,12 @@ class HomeScreen extends HookConsumerWidget {
                           )
                         : null,
                     border: InputBorder.none,
-                    contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                    contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                   ),
                 ),
               ),
             ),
-            const SizedBox(height: 8),
+            const SizedBox(height: 4),
           ],
         ),
       ),
