@@ -14,6 +14,8 @@ class ProductModel {
   final String? distributorId;
   final Timestamp? createdAt;
   final String? selectedPackage;
+  late bool isFavorite;
+
 
   ProductModel({
     required this.id,
@@ -29,6 +31,7 @@ class ProductModel {
     this.distributorId,
     this.createdAt,
     this.selectedPackage,
+    this.isFavorite = false,
   });
 
   factory ProductModel.fromFirestore(DocumentSnapshot doc) {
@@ -71,6 +74,7 @@ class ProductModel {
     String? distributorId,
     Timestamp? createdAt,
     String? selectedPackage,
+    bool? isFavorite,
   }) {
     return ProductModel(
       id: id ?? this.id,
@@ -86,6 +90,7 @@ class ProductModel {
       distributorId: distributorId ?? this.distributorId,
       createdAt: createdAt ?? this.createdAt,
       selectedPackage: selectedPackage ?? this.selectedPackage,
+      isFavorite: isFavorite ?? this.isFavorite,
     );
   }
 
@@ -101,5 +106,45 @@ class ProductModel {
       'imageUrl': imageUrl,
       'createdAt': createdAt ?? FieldValue.serverTimestamp(),
     };
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'id': id,
+      'name': name,
+      'description': description,
+      'active_principle': activePrinciple,
+      'company': company,
+      'action': action,
+      'package': package,
+      'availablePackages': availablePackages,
+      'imageUrl': imageUrl,
+      'price': price,
+      'distributorId': distributorId,
+      'createdAt': createdAt?.millisecondsSinceEpoch,
+      'selectedPackage': selectedPackage,
+      'isFavorite': isFavorite,
+    };
+  }
+
+  factory ProductModel.fromJson(Map<String, dynamic> json) {
+    return ProductModel(
+      id: json['id'],
+      name: json['name'],
+      description: json['description'],
+      activePrinciple: json['active_principle'],
+      company: json['company'],
+      action: json['action'],
+      package: json['package'],
+      availablePackages: List<String>.from(json['availablePackages']),
+      imageUrl: json['imageUrl'],
+      price: json['price'],
+      distributorId: json['distributorId'],
+      createdAt: json['createdAt'] != null
+          ? Timestamp.fromMillisecondsSinceEpoch(json['createdAt'])
+          : null,
+      selectedPackage: json['selectedPackage'],
+      isFavorite: json['isFavorite'] ?? false,
+    );
   }
 }

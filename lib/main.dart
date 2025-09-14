@@ -14,6 +14,8 @@ import 'features/authentication/presentation/screens/auth_gate.dart';
 import 'features/authentication/presentation/screens/splash_screen.dart';
 import 'features/authentication/presentation/screens/login_screen.dart';
 
+final GlobalKey<ScaffoldMessengerState> scaffoldMessengerKey = GlobalKey<ScaffoldMessengerState>();
+
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
@@ -61,6 +63,7 @@ class _FieldawyStoreAppState extends ConsumerState<FieldawyStoreApp> {
     final themeMode = ref.watch(themeNotifierProvider);
 
     return MaterialApp(
+      scaffoldMessengerKey: scaffoldMessengerKey,
       key: ValueKey(locale),
       debugShowCheckedModeBanner: false,
       title: 'Fieldawy Store',
